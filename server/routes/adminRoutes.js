@@ -1,6 +1,11 @@
 import express from 'express';
 import multer from 'multer';
 import adminController from '../controllers/adminController.js';
+import categoryController from '../controllers/categoryController.js';
+import productController from '../controllers/productController.js';
+import competitionController from '../controllers/competitionController.js';
+import trekkingController from '../controllers/trekkingController.js';
+import fitnessController from '../controllers/fitnessController.js';
 const router = express.Router();
 const storage = multer.memoryStorage();
 
@@ -24,26 +29,27 @@ router.patch('/approve-admin-request/:id', adminController.approveAdminRequest);
 router.patch('/reject-admin-request/:id', adminController.rejectAdminRequest);
 
 // Competitions
-router.get('/competitions', adminController.loadCompetitionsPage);
-router.post('/add-Competitions', uploads, adminController.addCompetition);
-router.put('/edit-competition/:id', uploads, adminController.editCompetition);
-router.delete('/delete-competition/:id', adminController.deleteCompetition);
+router.get('/competitions', competitionController.loadCompetitionsPage);
+router.post('/add-Competitions', uploads, competitionController.addCompetition);
+router.put('/edit-competition/:id', uploads, competitionController.editCompetition);
+router.delete('/delete-competition/:id', competitionController.deleteCompetition);
 
 // Trekking
-router.get('/trekking', adminController.loadTrekkingPage);
-router.post('/add-trekking', upload, adminController.addTrekking);
-router.put('/edit-trekking/:id', upload, adminController.editTrekking);
-router.delete('/delete-trekking/:id', adminController.deleteTrekking);
+router.get('/trekking', trekkingController.loadTrekkingPage);
+router.post('/add-trekking', upload, trekkingController.addTrekking);
+router.put('/edit-trekking/:id', upload, trekkingController.editTrekking);
+router.delete('/delete-trekking/:id', trekkingController.deleteTrekking);
+//Product-Category Management
+router.post('/add-product-category', categoryController.addProductCategory);
+router.get('/product-categories', categoryController.getAllProductCategories);
+router.put('/edit-product-categories/:categoryId', categoryController.editProductCategory);
+router.patch('/product-categories-toggle/:categoryId/status', categoryController.toggleProductCategoryStatus);
 
 // Product Management
-router.get('/products', adminController.loadProductsPage);
-router.post('/add-product-category', adminController.addProductCategory);
-router.get('/product-categories', adminController.getAllProductCategories);
-router.put('/edit-product-categories/:categoryId', adminController.editProductCategory);
-router.patch('/product-categories-toggle/:categoryId/status', adminController.toggleProductCategoryStatus);
-router.post('/add-product', uploads, adminController.addProduct);
-router.put('/edit-product/:id', uploads, adminController.editProduct);
-router.put('/product/:productId/status', adminController.changeProductStatus);
+router.get('/products', productController.loadProductsPage);
+router.post('/add-product', uploads, productController.addProduct);
+router.put('/edit-product/:id', uploads, productController.editProduct);
+router.put('/product/:productId/status', productController.changeProductStatus);
 
 // User Management
 router.get('/users', adminController.getUsers);
@@ -51,7 +57,7 @@ router.patch('/user/block', adminController.blockUser);
 router.patch('/user/unblock', adminController.unblockUser);
 
 // Fitness
-router.post('/add-fitness', adminController.addFitness);
-router.post('/add-fitness-category', adminController.addFitnessCategory);
+router.post('/add-fitness', fitnessController.addFitness);
+router.post('/add-fitness-category', fitnessController.addFitnessCategory);
 
 export default router;

@@ -53,7 +53,7 @@ function Products() {
         Our Products
       </h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {products.map((product) => (
           <SpotlightCard
             key={product._id}
@@ -69,9 +69,9 @@ function Products() {
               />
 
               {/* Product Details */}
-              <div className="p-2 flex flex-col justify-start items-center flex-1">
-                <Link to={`/product/${product._id}`}>
-                  <h2 className="text-base font-medium text-black mt-2 hover:underline text-center line-clamp-2">
+              <div className="p-2 flex flex-col justify-start items-center flex-1 ">
+                <Link to={`/product/${product._id}`} className="no-underline">
+                  <h2 className="text-base font-medium text-black mt-2  text-center line-clamp-2 ">
                     {product.name}
                   </h2>
                 </Link>

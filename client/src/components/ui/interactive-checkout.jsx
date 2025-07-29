@@ -259,7 +259,7 @@ function InteractiveCheckout({ products = [] }) {
                   <NumberFlow value={totalPrice} />
                 </motion.span>
               </div>
-              <Button size="sm" className="w-full gap-2">
+              <Button size="sm" className="w-full gap-2"onClick={()=> navigate("/checkout")}>
                 <CreditCard className="w-4 h-4" />
                 Checkout
               </Button>
