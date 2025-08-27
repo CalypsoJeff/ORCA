@@ -3,7 +3,7 @@ import redis from '../helper/redisClient.js';
 import { sendEmailWithOTP, generateOTP } from '../helper/nodeMailer.js';
 import { generateResetToken, generateToken, validateResetToken } from '../helper/jwtHelper.js';
 import Admin from '../models/adminModel.js';
-import Users from '../models/UserModel.js';
+import Users from '../models/userModel.js';
 
 
 export const ensureSuperAdminExists = async () => {
