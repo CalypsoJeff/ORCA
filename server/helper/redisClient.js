@@ -1,14 +1,12 @@
-
 import Redis from "ioredis";
 
-// Create Redis client instance
-const redis = new Redis({
-  host: "127.0.0.1",
-  port: 6379,
+const redis = new Redis(process.env.REDIS_URL, {
+  // optional retry strategy
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
+  tls: process.env.REDIS_URL?.startsWith("rediss://") ? {} : undefined,
 });
 
 redis.on("connect", () => {
