@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import redis from "../helper/redisClient.js";
 import { generateOTP, sendOTP } from "../helper/twiloOtp.js";
-import User from '../models/UserModel.js';
+import User from '../models/userModel.js';
 import { OAuth2Client } from "google-auth-library";
 import Competition from '../models/competitionsModel.js';
 import Trekking from '../models/trekkingModel.js';
