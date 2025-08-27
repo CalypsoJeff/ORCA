@@ -1,5 +1,5 @@
 // src/pages/user/CheckoutPage.jsx
-
+//Trial done name change dummy
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "flowbite-react";
@@ -10,25 +10,24 @@ import { loadCart } from "../../api/endpoints/products/user-products";
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+
   const [cartItems, setCartItems] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' or 'razorpay'
+  const [loading, setLoading] = useState(true);   // cart loading
+  const [paying, setPaying] = useState(false);    // payment in progress
+  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' | 'razorpay'
 
   useEffect(() => {
     const fetchCart = async () => {
       try {
         const res = await loadCart();
-        if (res.data?.items) {
-          setCartItems(res.data.items);
-        }
+        if (res.data?.items) setCartItems(res.data.items);
       } catch (err) {
         console.error("Error loading cart", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchCart();
   }, []);
 
@@ -37,21 +36,103 @@ const CheckoutPage = () => {
     0
   );
 
+  // --- load Razorpay SDK on demand ---
+  const loadRazorpayScript = () =>
+    new Promise((resolve) => {
+      if (window.Razorpay) return resolve(true);
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+  const payWithRazorpay = async (addressId) => {
+    setPaying(true);
+    try {
+      const ok = await loadRazorpayScript();
+      if (!ok) throw new Error("Failed to load Razorpay SDK");
+
+      // 1) Ask server to create Razorpay Order (amount computed server-side)
+      const res = await fetch("/api/payments/razorpay/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // keep if you use cookies/auth
+        body: JSON.stringify({ addressId }),
+      });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload.error || "Create order failed");
+
+      // 2) Open Razorpay checkout
+      const options = {
+        key: payload.key,
+        amount: payload.amount,       // in paise (already from server)
+        currency: payload.currency,
+        order_id: payload.razorpayOrderId,
+        name: "ORCA E-Commerce",
+        description: "Order payment",
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+          contact: user?.phone || "",
+        },
+        notes: { app: "ecommerce", orderId: String(payload.orderId) },
+        theme: { color: "#0ea5e9" },
+        handler: async (response) => {
+          // 3) Verify payment on server
+          const v = await fetch("/api/payments/razorpay/verify", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(response),
+          });
+          const data = await v.json();
+          if (data.status === "success") {
+            navigate(`/order/success/${data.orderId}`);
+          } else {
+            alert("Payment verification failed. Please contact support.");
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            // Optional: restore UI or show a toast
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (err) => {
+        console.error("Payment failed:", err?.error);
+        alert(err?.error?.description || "Payment failed. Please try again.");
+      });
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Unable to start payment");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // --- main handler ---
   const handleConfirmOrder = () => {
     const selectedAddress = user?.addresses?.[selectedAddressIndex];
+    const addressId = selectedAddress?._id || selectedAddress?.id;
 
-    if (!selectedAddress) {
-      alert("Please select a shipping address.");
+    if (!selectedAddress || !addressId) {
+      alert("Please select a valid shipping address.");
       return;
     }
 
     if (paymentMethod === "cod") {
+      // Optional: call a /orders/create-cod endpoint to place order without payment
       alert("Order placed with Cash on Delivery!");
-    } else {
-      alert("Proceeding to Razorpay...");
+      // navigate("/orders"); // or go to an order confirmation page
+      return;
     }
 
-    // You can now POST order to backend here...
+    // Razorpay flow
+    payWithRazorpay(addressId);
   };
 
   return (
@@ -66,32 +147,29 @@ const CheckoutPage = () => {
           <>
             {/* Address Selection */}
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-2">
-                Select Shipping Address
-              </h2>
+              <h2 className="text-xl font-semibold mb-2">Select Shipping Address</h2>
               {user?.addresses?.length ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-  {user.addresses.map((addr, index) => (
-    <div
-      key={index}
-      className={`border rounded-md p-4 cursor-pointer ${
-        selectedAddressIndex === index
-          ? "border-blue-600 bg-blue-200"
-          : "border-gray-300"
-      }`}
-      onClick={() => setSelectedAddressIndex(index)}
-    >
-      <p>
-        {addr.street}, {addr.city}, {addr.state}, {addr.country} -{" "}
-        {addr.postalCode}
-      </p>
-      {addr.isDefault && (
-        <span className="text-sm text-green-600">Default</span>
-      )}
-    </div>
-  ))}
-</div>
+                    {user.addresses.map((addr, index) => (
+                      <div
+                        key={addr._id || index}
+                        className={`border rounded-md p-4 cursor-pointer ${
+                          selectedAddressIndex === index
+                            ? "border-blue-600 bg-blue-200"
+                            : "border-gray-300"
+                        }`}
+                        onClick={() => setSelectedAddressIndex(index)}
+                      >
+                        <p>
+                          {addr.street}, {addr.city}, {addr.state}, {addr.country} - {addr.postalCode}
+                        </p>
+                        {addr.isDefault && (
+                          <span className="text-sm text-green-600">Default</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
                   <div className="text-right">
                     <Button className="bg-sky-600" size="sm" onClick={() => navigate("/profile")}>
@@ -102,10 +180,7 @@ const CheckoutPage = () => {
               ) : (
                 <div className="text-gray-500">
                   No saved addresses.{" "}
-                  <button
-                    onClick={() => navigate("/profile")}
-                    className="text-blue-600 underline"
-                  >
+                  <button onClick={() => navigate("/profile")} className="text-blue-600 underline">
                     Add one
                   </button>
                 </div>
@@ -117,33 +192,26 @@ const CheckoutPage = () => {
               <h2 className="text-xl font-semibold mb-2">Order Summary</h2>
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="flex gap-4 items-center border rounded-lg p-4 shadow-sm"
-                  >
+                  <div key={item._id} className="flex gap-4 items-center border rounded-lg p-4 shadow-sm">
                     <img
                       src={item.productId?.images?.[0] || "/placeholder.jpg"}
                       alt={item.productId?.name}
                       className="w-20 h-20 object-cover rounded-md"
                     />
-
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg">
-                        {item.productId?.name}
-                      </h3>
+                      <h3 className="font-semibold text-lg">{item.productId?.name}</h3>
                       <p className="text-sm text-gray-600">
                         Size: {item.size} | Color:{" "}
                         <span
                           className="inline-block w-4 h-4 rounded-full border"
                           style={{ backgroundColor: item.color }}
-                        ></span>{" "}
-                        {item.color}
+                        />
+                        {" "}{item.color}
                       </p>
                       <div className="flex justify-between items-center text-sm text-gray-500">
                         <span>Quantity: {item.quantity}</span>
                         <span className="font-medium text-gray-800">
-                          ₹{item.price} × {item.quantity} = ₹
-                          {item.price * item.quantity}
+                          ₹{item.price} × {item.quantity} = ₹{item.price * item.quantity}
                         </span>
                       </div>
                     </div>
@@ -151,9 +219,7 @@ const CheckoutPage = () => {
                 ))}
               </div>
 
-              <div className="mt-4 font-bold text-lg">
-                Total: ₹{totalPrice.toFixed(2)}
-              </div>
+              <div className="mt-4 font-bold text-lg">Total: ₹{totalPrice.toFixed(2)}</div>
             </div>
 
             {/* Payment Method */}
@@ -169,7 +235,7 @@ const CheckoutPage = () => {
                 />
                 <span className="ml-2">Cash on Delivery</span>
               </label>
-              <label>
+              <label className="ml-6">
                 <input
                   type="radio"
                   name="payment"
@@ -183,7 +249,9 @@ const CheckoutPage = () => {
 
             {/* Confirm Button */}
             <div className="text-center">
-              <Button className="bg-sky-600" onClick={handleConfirmOrder}>Place Order</Button>
+              <Button className="bg-sky-600" onClick={handleConfirmOrder} disabled={paying}>
+                {paying ? "Processing…" : "Place Order"}
+              </Button>
             </div>
           </>
         )}

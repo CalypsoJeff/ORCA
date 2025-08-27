@@ -15,6 +15,7 @@ import {
 import NavBar from "../../components/user/NavBar";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 import { updateProfileAsync } from "../../features/auth/authSlice";
+import UserSidebar from "../../components/user/UserSidebar";
 
 const UserProfile = () => {
   const dispatch = useDispatch();
@@ -205,7 +206,14 @@ const UserProfile = () => {
       <section style={{ backgroundColor: "#eee", marginTop: "100px" }}>
         <MDBContainer className="py-5">
           <MDBRow>
-            <MDBCol lg="4">
+            {/* LEFT: Sidebar */}
+            <MDBCol lg="3" className="mb-4">
+              <UserSidebar />
+            </MDBCol>
+
+            {/* RIGHT: Profile content */}
+            <MDBCol lg="9">
+              {/* Avatar / quick actions */}
               <MDBCard className="mb-4">
                 <MDBCardBody className="text-center">
                   <MDBCardImage
@@ -233,9 +241,8 @@ const UserProfile = () => {
                   </div>
                 </MDBCardBody>
               </MDBCard>
-            </MDBCol>
 
-            <MDBCol lg="8">
+              {/* Details card (your existing fields/addresses UI) */}
               <MDBCard className="mb-4">
                 <MDBCardBody>
                   {/* Name */}
@@ -335,7 +342,6 @@ const UserProfile = () => {
                           </MDBCardText>
                         )
                       ) : (
-                        // Editing mode - Address list
                         <>
                           {profileData.addresses.map((address, index) => (
                             <div
@@ -384,7 +390,7 @@ const UserProfile = () => {
                             </div>
                           ))}
 
-                          {/* Add new address form */}
+                          {/* Add/Edit new address form */}
                           <div className="mt-3 p-3 border rounded">
                             <h6>
                               {editingAddressIndex >= 0
@@ -467,7 +473,7 @@ const UserProfile = () => {
                   </MDBRow>
                   <hr />
 
-                  {/* Save Button */}
+                  {/* Save / Cancel Buttons */}
                   {editing && (
                     <div className="text-center mt-4">
                       <MDBBtn

@@ -213,7 +213,7 @@ const CompetitionDetail = () => {
         <MDBRow className="mt-4">
           {/* Competition Image */}
           <MDBCol lg="6">
-            <MDBCard className="shadow-lg border-0">
+            <MDBCard className="shadow-lg border-0 h-">
               <MDBCardImage
                 src={competition.image[0]}
                 alt={competition.name}

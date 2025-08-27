@@ -1,3 +1,4 @@
+import { uploadToCloudinary } from '../helper/uploadToCloudinary.js';
 import Competition from '../models/competitionsModel.js';
 
 const loadCompetitionsPage = async (req, res) => {
@@ -44,11 +45,11 @@ const addCompetition = async (req, res) => {
             console.error("❌ Competition Image is missing.");
             return res.status(400).json({ message: "Competition Image is required." });
         }
-        const { Location } = await uploadToS3(req.files[0]);
+        const { secure_url } = await uploadToCloudinary(req.files[0]);
         const competition = new Competition({
             name,
             category,
-            image: [Location],
+            image: [secure_url],
             time,
             date,
             place,
@@ -98,7 +99,7 @@ const editCompetition = async (req, res) => {
             console.error("❌ Competition Image is missing.");
             return res.status(400).json({ message: "Competition Image is required." });
         }
-        const { Location } = await uploadToS3(req.files[0]);
+        const { secure_url } = await uploadToCloudinary(req.files[0]);
         const existingCompetition = await Competition.findById(id);
         if (!existingCompetition) {
             return res.status(404).json({
@@ -110,7 +111,7 @@ const editCompetition = async (req, res) => {
             {
                 name: name || existingCompetition.name,
                 category: category || existingCompetition.category,
-                image: [Location] || existingCompetition.image,
+                image: [secure_url] || existingCompetition.image,
                 time: time || existingCompetition.time,
                 date: date || existingCompetition.date,
                 place: place || existingCompetition.place,

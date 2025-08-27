@@ -1,3 +1,4 @@
+import { uploadToCloudinary } from '../helper/uploadToCloudinary.js';
 import Trekking from '../models/trekkingModel.js';
 
 const loadTrekkingPage = async (req, res) => {
@@ -18,8 +19,8 @@ const addTrekking = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ message: "Image is required." });
         }
-        const { Location } = await uploadToS3(req.file);
-        const trekkingEvent = new Trekking({ name, category, image: Location, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description });
+        const { secure_url } = await uploadToCloudinary(req.file);
+        const trekkingEvent = new Trekking({ name, category, image: secure_url, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description });
         await trekkingEvent.save();
         return res.status(200).json({ message: "Trekking event added successfully.", trekkingEvent });
     } catch (error) {

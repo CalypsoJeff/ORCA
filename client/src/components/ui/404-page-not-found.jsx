@@ -29,7 +29,7 @@ export function NotFoundPage() {
 
               <Button
                 variant="default"
-                onClick={() => navigate("/Landing")}
+                onClick={() => navigate("/home")}
                 className="my-5 bg-green-600 hover:bg-green-700">
                 Go to Home
               </Button>

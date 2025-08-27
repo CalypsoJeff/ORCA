@@ -27,7 +27,7 @@ export default function Login() {
       const response = await dispatch(loginAsync(data));
       if (response.meta.requestStatus === "fulfilled") {
         toast.success("Login successful!");
-        navigate("/landing");
+        navigate("/home");
       } else {
         toast.error(response.payload || "Login failed");
       }

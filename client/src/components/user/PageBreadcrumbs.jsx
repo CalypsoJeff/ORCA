@@ -34,7 +34,7 @@ const PageBreadcrumbs = () => {
         <BreadcrumbList>
           <BreadcrumbItem>
             <Link
-              to="/landing"
+              to="/home"
               className="inline-flex items-center gap-1.5 text-orca-600 hover:text-orca-800 transition-colors"
             >
               <Home className="h-4 w-4" aria-hidden="true" />

@@ -32,10 +32,10 @@ const NavBar = () => {
     dispatch(logout());
   };
 
-  const isLandingPage = location.pathname === "/landing";
+  const isLandingPage = location.pathname === "/home";
 
   const navItems = [
-    { name: "Home", url: "/landing", icon: Home },
+    { name: "Home", url: "/home", icon: Home },
     { name: "Competitions", url: "/competitions", icon: Trophy },
     { name: "Riders Group", url: "/rides", icon: Users },
     { name: "Trekking/Exploration", url: "/trekking", icon: Mountain },
@@ -78,7 +78,7 @@ const NavBar = () => {
               {/* Profile section with better styling */}
               <div className="flex items-center space-x-2 hover:bg-sky-100 rounded-full px-3 py-1.5 transition-all duration-200 shadow-sm hover:shadow-md">
                 <div
-                  onClick={() => (window.location.href = "/profile")}
+                  onClick={() => (window.location.href = "/account/profile")}
                   className="relative cursor-pointer"
                 >
                   <UserCircle className="h-6 w-6 text-sky-600 hover:text-sky-700 transition-colors" />

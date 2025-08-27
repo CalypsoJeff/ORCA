@@ -27,13 +27,13 @@ const CTASection = () => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <a
                 href="#signup"
-                className="h-12 w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-8 text-sm font-medium text-orca-800 transition-colors hover:bg-orca-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+                className="h-12 w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-8 text-sm font-medium text-orca-800 transition-colors hover:bg-orca-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white no-underline"
               >
                 Start Free Trial
               </a>
               <a
                 href="#demo"
-                className="h-12 w-full sm:w-auto inline-flex items-center justify-center rounded-md border border-white/30 bg-transparent px-8 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+                className="h-12 w-full sm:w-auto inline-flex items-center justify-center rounded-md border border-white/30 bg-transparent px-8 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white no-underline"
               >
                 Request Demo
               </a>

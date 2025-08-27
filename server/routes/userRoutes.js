@@ -28,6 +28,7 @@ router.post("/cart", isLogin, userController.addToCart);
 router.get("/cart", isLogin, userController.loadCart);
 router.put('/cart', isLogin, userController.updateCart);
 
+
 // Trekking
 router.get("/trekkings", userController.loadTrekking);
 

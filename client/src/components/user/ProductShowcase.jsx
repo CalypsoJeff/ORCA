@@ -72,7 +72,6 @@ const ProductShowcase = () => {
   }
   const limitedProducts = products.slice(0, 4);
 
-  // Create an array of product cards for the slider
   const productCards = limitedProducts.map((product) => (
     <ProductCard key={product.id} product={product} />
   ));
@@ -105,7 +104,7 @@ const ProductShowcase = () => {
         <div className="text-center mt-10">
           <a
             href="/shop"
-            className="inline-flex items-center justify-center rounded-md bg-orca-600 px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-orca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orca-500"
+            className="inline-flex items-center justify-center rounded-md bg-orca-600 px-8 py-3 text-sm font-medium text-white transition-colors hover:bg-orca-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-orca-500 no-underline"
           >
             View All Products
           </a>

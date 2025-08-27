@@ -3,11 +3,7 @@ import redis from '../helper/redisClient.js';
 import { sendEmailWithOTP, generateOTP } from '../helper/nodeMailer.js';
 import { generateResetToken, generateToken, validateResetToken } from '../helper/jwtHelper.js';
 import Admin from '../models/adminModel.js';
-import Product from '../models/productModel.js';
 import Users from '../models/UserModel.js';
-import Fitness from '../models/fitnessModel.js';
-import FitnessCategory from '../models/fitnessCategory.js';
-import { uploadToS3 } from '../helper/s3Uploader.js';
 
 
 export const ensureSuperAdminExists = async () => {

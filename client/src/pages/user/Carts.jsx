@@ -20,7 +20,6 @@ const InteractiveCheckoutPage = () => {
       } catch (error) {
         console.error("Failed to fetch cart:", error);
       } finally {
-        // ✅ Ensure loading ends regardless of success or error
         setLoading(false);
       }
     };

@@ -2,16 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchCompetitions } from "../../api/endpoints/competitions/user-competition";
 import NavBar from "../../components/user/NavBar";
-import {
-  MDBCard,
-  MDBCardImage,
-  MDBCardBody,
-  MDBCardTitle,
-  MDBCardText,
-  MDBRow,
-  MDBCol,
-  MDBBtn,
-} from "mdb-react-ui-kit";
+import { MDBCard, MDBCardImage, MDBRow, MDBCol } from "mdb-react-ui-kit";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 
 const Competitions = () => {
@@ -50,31 +41,23 @@ const Competitions = () => {
         <MDBRow className="row-cols-1 row-cols-md-3 g-4">
           {competitions.map((comp) => (
             <MDBCol key={comp.id}>
-              <MDBCard className="h-100">
-                <MDBCardImage
-                  src={comp.image}
-                  alt={comp.title}
-                  position="top"
-                />
-                <MDBCardBody>
-                  <MDBCardTitle>{comp.title}</MDBCardTitle>
-                  <MDBCardText>
-                    <strong>Category:</strong>{" "}
-                    {comp.category.length ? comp.category.join(", ") : "N/A"}{" "}
-                    <br />
-                    <strong>Date:</strong>{" "}
-                    {comp.date ? new Date(comp.date).toDateString() : "N/A"}{" "}
-                    <br />
-                    <strong>Place:</strong> {comp.place} <br />
-                    <strong>Duration:</strong> {comp.duration} days <br />
-                    <strong>Description:</strong>{" "}
-                    {comp.description || "No description available."}
-                  </MDBCardText>
-                  <Link to={`/competition/${comp.id}`}>
-                    <MDBBtn color="primary">View</MDBBtn>
-                  </Link>
-                </MDBCardBody>
-              </MDBCard>
+              <Link to={`/competition/${comp.id}`} className="block h-full">
+                <MDBCard className="h-full p-0 border-none shadow-md overflow-hidden rounded-lg">
+                  <div className="relative w-full h-[500px]">
+                    <MDBCardImage
+                      src={comp.image}
+                      alt={comp.title}
+                      className="w-full h-full object-cover"
+                      position="top"
+                    />
+                    <div className="absolute bottom-0 left-0 w-full bg-black/20 bg-opacity-60 px-4 py-2">
+                      <h5 className="text-white text-lg font-semibold m-0 text-center">
+                        {comp.title}
+                      </h5>
+                    </div>
+                  </div>
+                </MDBCard>
+              </Link>
             </MDBCol>
           ))}
         </MDBRow>

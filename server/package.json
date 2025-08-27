@@ -9,6 +9,7 @@
     "aws-sdk": "^2.1692.0",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
+    "cloudflared": "^0.7.1",
     "cloudinary": "^2.7.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -27,6 +28,7 @@
     "nodemailer": "^6.10.0",
     "nodemon": "^3.1.9",
     "path": "^0.12.7",
+    "razorpay": "^2.9.6",
     "twilio": "^5.4.2"
   }
 }

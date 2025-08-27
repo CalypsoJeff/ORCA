@@ -2,16 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchTrekkings } from "../../api/endpoints/trekkings/user-trekking";
 import NavBar from "../../components/user/NavBar";
-import {
-  MDBCard,
-  MDBCardImage,
-  MDBCardBody,
-  MDBCardTitle,
-  MDBCardText,
-  MDBRow,
-  MDBCol,
-  MDBBtn,
-} from "mdb-react-ui-kit";
+import { MDBCard, MDBCardImage, MDBRow, MDBCol } from "mdb-react-ui-kit";
 
 const Trekkings = () => {
   const [trekkings, setTrekkings] = useState([]);
@@ -50,35 +41,23 @@ const Trekkings = () => {
         <MDBRow className="row-cols-1 row-cols-md-3 g-4">
           {trekkings.map((trek) => (
             <MDBCol key={trek.id}>
-              <MDBCard className="h-100">
-                <MDBCardImage
-                  src={trek.image}
-                  alt={trek.title}
-                  position="top"
-                />
-                <MDBCardBody>
-                  <MDBCardTitle>{trek.title}</MDBCardTitle>
-                  <MDBCardText>
-                    <strong>Location:</strong> {trek.location} <br />
-                    <strong>Difficulty:</strong> {trek.difficulty} <br />
-                    <strong>Distance:</strong> {trek.distance} km <br />
-                    <strong>Duration:</strong> {trek.duration} <br />
-                    <strong>Date:</strong>{" "}
-                    {trek.date ? new Date(trek.date).toDateString() : "N/A"}{" "}
-                    <br />
-                    <strong>Cost per Person:</strong> ₹{trek.cost} <br />
-                    <strong>Max Participants:</strong> {trek.maxParticipants}{" "}
-                    <br />
-                    <strong>Registered Participants:</strong>{" "}
-                    {trek.registeredParticipants} <br />
-                    {/* <strong>Description:</strong>{" "}
-                    {trek.description || "No description available."} */}
-                  </MDBCardText>
-                  <Link to={`/trekking/${trek.id}`}>
-                    <MDBBtn color="primary">View</MDBBtn>
-                  </Link>
-                </MDBCardBody>
-              </MDBCard>
+              <Link to={`/trekking/${trek.id}`} className="block h-full">
+                <MDBCard className="h-full p-0 border-none shadow-md overflow-hidden rounded-lg">
+                  <div className="relative w-full h-[500px]">
+                    <MDBCardImage
+                      src={trek.image}
+                      alt={trek.title}
+                      className="w-full h-full object-cover"
+                      position="top"
+                    />
+                    <div className="absolute bottom-0 left-0 w-full bg-black/20 bg-opacity-60 px-4 py-2">
+                      <h5 className="text-white text-lg font-semibold m-0">
+                        {trek.title}
+                      </h5>
+                    </div>
+                  </div>
+                </MDBCard>
+              </Link>
             </MDBCol>
           ))}
         </MDBRow>

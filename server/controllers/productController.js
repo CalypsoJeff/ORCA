@@ -1,5 +1,6 @@
 import Product from '../models/productModel.js';
 import Category from "../models/productCategory.js"
+import { uploadToCloudinary } from '../helper/uploadToCloudinary.js';
 const loadProductsPage = async (req, res) => {
     try {
         const Products = await Product.find().sort({ createdAt: -1 }).populate("category", "name");
@@ -50,8 +51,9 @@ const addProduct = async (req, res) => {
         }
         const uploadedImages = await Promise.all(
             files.map(async (file) => {
-                const { Location } = await uploadToS3(file);
-                return Location;
+                const { secure_url } = await uploadToCloudinary(file);
+                console.log(secure_url,"details about cloud image")
+                return secure_url;
             })
         );
         const product = new Product({
@@ -118,8 +120,8 @@ const editProduct = async (req, res) => {
         }
         const uploadedImages = await Promise.all(
             files.map(async (file) => {
-                const { Location } = await uploadToS3(file);
-                return Location;
+                const { secure_url } = await uploadToCloudinary(file);
+                return secure_url;
             })
         );
         const updatedProduct = await Product.findByIdAndUpdate(

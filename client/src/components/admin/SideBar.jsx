@@ -61,7 +61,7 @@ export default function SideBar({ isOpen, toggleSidebar }) {
             <Link
               key={index}
               to={item.path}
-              className="flex items-center px-6 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+              className="flex items-center px-6 py-3 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors no-underline"
             >
               <item.icon className="w-5 h-5 mr-3" />
               {item.label}

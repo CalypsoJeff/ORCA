@@ -1,5 +1,4 @@
 import { Route, Routes } from "react-router-dom";
-import Home from "../../pages/user/Home";
 import Login from "../../pages/user/Login";
 import UserPrivateRoutes from "./UserPrivateRoutes";
 import Register from "../../pages/user/Register";
@@ -17,8 +16,10 @@ import PaymentConfirmation from "../../pages/user/PaymentConfirmation";
 import UserProfile from "../../pages/user/UserProfile";
 // import Rides from "../../pages/user/Rides";
 import { NotFoundPage } from "../../components/ui/404-page-not-found";
-import CheckoutPage from "../../pages/user/CheckOutPage";
+import CheckoutPage from "../../pages/user/CheckoutPage";
 import RidersPage from "../../pages/user/RidersPage";
+import OrderDetails from "../../pages/user/OrderDetails";
+import UserOrders from "../../pages/user/UserOrders";
 
 const UserRoutes = () => {
   return (
@@ -31,13 +32,27 @@ const UserRoutes = () => {
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/profile" element={<UserProfile />} />
-        <Route path="/landing" element={<LandingPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/account/profile" element={<UserProfile />} />
+        {/* <Route path="/account/dashboard" element={<AccountDashboard />} /> */}
+        <Route path="/account/orders" element={<UserOrders />} />
+        <Route path="/account/orders/:orderId" element={<OrderDetails />} />
+        {/* <Route path="/account/wishlist" element={<WishlistPage />} /> */}
+        {/* <Route path="/account/bookings" element={<BookingsPage />} /> */}
+        {/* <Route path="/account/addresses" element={<AddressesPage />} /> */}
+        {/* <Route
+          path="/account/change-password"
+          element={<ChangePasswordPage />}
+        /> */}
+        {/* <Route
+          path="/account/forgot-password"
+          element={<ForgotPasswordPage />}
+        /> */}
+        <Route path="/home" element={<LandingPage />} />
         <Route path="/fitness" element={<Fitness />} />
         <Route path="/shop" element={<Products />} />
         <Route path="/product/:id" element={<ProductDetails />} />
-        <Route path="/checkout" element={<CheckoutPage/>}/>
+        <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/competitions" element={<Competitions />} />
         <Route path="/competition/:id" element={<CompetitionDetail />} />
         <Route
@@ -46,9 +61,8 @@ const UserRoutes = () => {
         />
         <Route path="/trekking" element={<Trekkings />} />
         <Route path="/cart" element={<Carts />} />
-        <Route path="/rides" element={<RidersPage/>}/>
+        <Route path="/rides" element={<RidersPage />} />
         <Route path="*" element={<NotFoundPage />} />
-
       </Route>
     </Routes>
   );

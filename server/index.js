@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
+import paymentRoutes from "./routes/paymentRoutes.js";
 import { dbConnect } from './config/DB.js'; // Assuming DB.js has a named export `dbConnect`
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
@@ -29,8 +29,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
 
 app.use(
   session({
@@ -46,6 +44,7 @@ app.use(express.static(path.join(__dirname, "client/build")));
 // Routes
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api", paymentRoutes);
 
 // React SPA fallback
 app.get("*", (req, res) => {
