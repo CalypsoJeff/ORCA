@@ -1,11 +1,11 @@
 // src/pages/user/CheckoutPage.jsx
-//Trial done name change dummy
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "flowbite-react";
 import { useNavigate } from "react-router-dom";
 import NavBar from "../../components/user/NavBar";
 import { loadCart } from "../../api/endpoints/products/user-products";
+import axios from "axios";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -13,9 +13,15 @@ const CheckoutPage = () => {
 
   const [cartItems, setCartItems] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
-  const [loading, setLoading] = useState(true);   // cart loading
-  const [paying, setPaying] = useState(false);    // payment in progress
+  const [loading, setLoading] = useState(true); 
+  const [paying, setPaying] = useState(false); 
   const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' | 'razorpay'
+  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3030";
+  const api = axios.create({
+    baseURL: API_BASE,
+    withCredentials: true, // send cookies/session
+    headers: { "Content-Type": "application/json" },
+  });
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -53,20 +59,17 @@ const CheckoutPage = () => {
       const ok = await loadRazorpayScript();
       if (!ok) throw new Error("Failed to load Razorpay SDK");
 
-      // 1) Ask server to create Razorpay Order (amount computed server-side)
-      const res = await fetch("/api/payments/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // keep if you use cookies/auth
-        body: JSON.stringify({ addressId }),
-      });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload.error || "Create order failed");
+      // 1) Create Razorpay order on your API
+      const { data: payload } = await api.post(
+        "/api/payments/razorpay/create-order",
+        { addressId, userId: user?._id } // send userId if req.user isn't set by middleware
+      );
+      // payload: { key, amount, currency, razorpayOrderId, orderId }
 
       // 2) Open Razorpay checkout
       const options = {
         key: payload.key,
-        amount: payload.amount,       // in paise (already from server)
+        amount: payload.amount, // paise
         currency: payload.currency,
         order_id: payload.razorpayOrderId,
         name: "ORCA E-Commerce",
@@ -78,24 +81,25 @@ const CheckoutPage = () => {
         },
         notes: { app: "ecommerce", orderId: String(payload.orderId) },
         theme: { color: "#0ea5e9" },
-        handler: async (response) => {
-          // 3) Verify payment on server
-          const v = await fetch("/api/payments/razorpay/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(response),
-          });
-          const data = await v.json();
-          if (data.status === "success") {
-            navigate(`/order/success/${data.orderId}`);
-          } else {
-            alert("Payment verification failed. Please contact support.");
+        handler: async (resp) => {
+          try {
+            const { data } = await api.post(
+              "/api/payments/razorpay/verify",
+              resp
+            );
+            if (data.status === "success") {
+              navigate(`/order/success/${data.orderId}`);
+            } else {
+              alert(data.error || "Payment verification failed");
+            }
+          } catch (e) {
+            console.error(e);
+            alert(e?.response?.data?.error || "Payment verification failed");
           }
         },
         modal: {
           ondismiss: () => {
-            // Optional: restore UI or show a toast
+            // optional
           },
         },
       };
@@ -108,7 +112,9 @@ const CheckoutPage = () => {
       rzp.open();
     } catch (err) {
       console.error(err);
-      alert(err.message || "Unable to start payment");
+      alert(
+        err?.response?.data?.error || err.message || "Unable to start payment"
+      );
     } finally {
       setPaying(false);
     }
@@ -147,7 +153,9 @@ const CheckoutPage = () => {
           <>
             {/* Address Selection */}
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-2">Select Shipping Address</h2>
+              <h2 className="text-xl font-semibold mb-2">
+                Select Shipping Address
+              </h2>
               {user?.addresses?.length ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
@@ -162,17 +170,24 @@ const CheckoutPage = () => {
                         onClick={() => setSelectedAddressIndex(index)}
                       >
                         <p>
-                          {addr.street}, {addr.city}, {addr.state}, {addr.country} - {addr.postalCode}
+                          {addr.street}, {addr.city}, {addr.state},{" "}
+                          {addr.country} - {addr.postalCode}
                         </p>
                         {addr.isDefault && (
-                          <span className="text-sm text-green-600">Default</span>
+                          <span className="text-sm text-green-600">
+                            Default
+                          </span>
                         )}
                       </div>
                     ))}
                   </div>
 
                   <div className="text-right">
-                    <Button className="bg-sky-600" size="sm" onClick={() => navigate("/profile")}>
+                    <Button
+                      className="bg-sky-600"
+                      size="sm"
+                      onClick={() => navigate("/profile")}
+                    >
                       + Add New Address
                     </Button>
                   </div>
@@ -180,7 +195,10 @@ const CheckoutPage = () => {
               ) : (
                 <div className="text-gray-500">
                   No saved addresses.{" "}
-                  <button onClick={() => navigate("/profile")} className="text-blue-600 underline">
+                  <button
+                    onClick={() => navigate("/profile")}
+                    className="text-blue-600 underline"
+                  >
                     Add one
                   </button>
                 </div>
@@ -192,26 +210,32 @@ const CheckoutPage = () => {
               <h2 className="text-xl font-semibold mb-2">Order Summary</h2>
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item._id} className="flex gap-4 items-center border rounded-lg p-4 shadow-sm">
+                  <div
+                    key={item._id}
+                    className="flex gap-4 items-center border rounded-lg p-4 shadow-sm"
+                  >
                     <img
                       src={item.productId?.images?.[0] || "/placeholder.jpg"}
                       alt={item.productId?.name}
                       className="w-20 h-20 object-cover rounded-md"
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{item.productId?.name}</h3>
+                      <h3 className="font-semibold text-lg">
+                        {item.productId?.name}
+                      </h3>
                       <p className="text-sm text-gray-600">
                         Size: {item.size} | Color:{" "}
                         <span
                           className="inline-block w-4 h-4 rounded-full border"
                           style={{ backgroundColor: item.color }}
-                        />
-                        {" "}{item.color}
+                        />{" "}
+                        {item.color}
                       </p>
                       <div className="flex justify-between items-center text-sm text-gray-500">
                         <span>Quantity: {item.quantity}</span>
                         <span className="font-medium text-gray-800">
-                          ₹{item.price} × {item.quantity} = ₹{item.price * item.quantity}
+                          ₹{item.price} × {item.quantity} = ₹
+                          {item.price * item.quantity}
                         </span>
                       </div>
                     </div>
@@ -219,7 +243,9 @@ const CheckoutPage = () => {
                 ))}
               </div>
 
-              <div className="mt-4 font-bold text-lg">Total: ₹{totalPrice.toFixed(2)}</div>
+              <div className="mt-4 font-bold text-lg">
+                Total: ₹{totalPrice.toFixed(2)}
+              </div>
             </div>
 
             {/* Payment Method */}
@@ -249,7 +275,11 @@ const CheckoutPage = () => {
 
             {/* Confirm Button */}
             <div className="text-center">
-              <Button className="bg-sky-600" onClick={handleConfirmOrder} disabled={paying}>
+              <Button
+                className="bg-sky-600"
+                onClick={handleConfirmOrder}
+                disabled={paying}
+              >
                 {paying ? "Processing…" : "Place Order"}
               </Button>
             </div>

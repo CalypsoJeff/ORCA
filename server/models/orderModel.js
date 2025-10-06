@@ -86,9 +86,9 @@ const orderSchema = new Schema(
         // Payment
         payment: { type: paymentSchema, default: () => ({}) },
 
-        paymentMethod: { type: String, default: "razorpay" }, // prefer payment.gateway/method
-        payment_id: { type: String },                          // prefer payment.razorpayPaymentId
-        payment_status: { type: Boolean, default: false },     // prefer payment.status
+        paymentMethod: { type: String, default: "razorpay" }, 
+        payment_id: { type: String },                         
+        payment_status: { type: Boolean, default: false },
 
         orderDate: { type: Date, default: Date.now },
         cancelRequest: { type: Boolean, default: false },
@@ -104,7 +104,6 @@ const orderSchema = new Schema(
     { timestamps: true }
 );
 
-orderSchema.index({ "payment.razorpayOrderId": 1 });
 orderSchema.index({ "payment.status": 1, user: 1, createdAt: -1 });
 
 orderSchema.pre("save", function preSave(next) {

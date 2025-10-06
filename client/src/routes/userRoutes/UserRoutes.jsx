@@ -20,6 +20,7 @@ import CheckoutPage from "../../pages/user/CheckoutPage";
 import RidersPage from "../../pages/user/RidersPage";
 import OrderDetails from "../../pages/user/OrderDetails";
 import UserOrders from "../../pages/user/UserOrders";
+import OrderSuccess from "../../pages/user/OrderSuccess";
 
 const UserRoutes = () => {
   return (
@@ -29,6 +30,7 @@ const UserRoutes = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="/otp" element={<Otp />} />
       <Route path="/fitness" element={<Fitness />} />
+       <Route path="/order/success/:orderId" element={<OrderSuccess />} />
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>

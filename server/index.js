@@ -10,6 +10,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import { dbConnect } from './config/DB.js'; // Assuming DB.js has a named export `dbConnect`
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
@@ -45,6 +46,7 @@ app.use(express.static(path.join(__dirname, "client/build")));
 app.use("/api/user", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", paymentRoutes);
+app.use("/api", orderRoutes);
 
 // React SPA fallback
 app.get("*", (req, res) => {
