@@ -15,10 +15,8 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-  console.log("[VITE_API_BASE_URL]", API_BASE);
   const api = axios.create({
-    baseURL: API_BASE,
+    baseURL: "https://orca-1-nie0.onrender.com",
     withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
