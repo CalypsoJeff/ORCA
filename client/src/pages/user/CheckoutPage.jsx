@@ -13,13 +13,13 @@ const CheckoutPage = () => {
 
   const [cartItems, setCartItems] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
-  const [loading, setLoading] = useState(true); 
-  const [paying, setPaying] = useState(false); 
-  const [paymentMethod, setPaymentMethod] = useState("cod"); // 'cod' | 'razorpay'
-  const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3030";
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const API_BASE = import.meta.env.VITE_API_BASE;
   const api = axios.create({
     baseURL: API_BASE,
-    withCredentials: true, // send cookies/session
+    withCredentials: true,
     headers: { "Content-Type": "application/json" },
   });
 
