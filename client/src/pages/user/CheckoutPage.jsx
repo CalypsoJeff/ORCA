@@ -10,13 +10,13 @@ import axios from "axios";
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
-
   const [cartItems, setCartItems] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
+  console.log("[VITE_API_BASE_URL]", API_BASE);
   const api = axios.create({
     baseURL: API_BASE,
     withCredentials: true,
