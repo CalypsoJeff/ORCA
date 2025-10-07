@@ -16,7 +16,7 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const API_BASE = import.meta.env.VITE_API_BASE;
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
   const api = axios.create({
     baseURL: API_BASE,
     withCredentials: true,
