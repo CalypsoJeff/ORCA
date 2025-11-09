@@ -3,19 +3,6 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { MDBCard, MDBCardBody, MDBCardText, MDBBtn } from "mdb-react-ui-kit";
 
-/**
- * Reusable sidebar for user-account pages
- * Sections included:
- * - Overview (Profile)
- * - Shopping (Orders, Wishlist)
- * - Bookings (My Bookings)
- * - Account (Addresses, Change Password, Forgot Password)
- * - Support (Tickets, Help Center)
- *
- * Props:
- *  - collapsed (bool) optional
- *  - onToggle (fn) optional (for mobile)
- */
 export default function UserSidebar({ collapsed = false, onToggle }) {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
 
@@ -74,7 +61,7 @@ export default function UserSidebar({ collapsed = false, onToggle }) {
           </MDBCardText>
           <div className="d-grid gap-1 mb-2">
             {navItem("/account/profile", "Profile")}
-            {navItem("/account/dashboard", "Dashboard")}
+            {/* {navItem("/account/dashboard", "Dashboard")} */}
           </div>
 
           <MDBCardText className="text-uppercase text-muted small px-2 mt-3 mb-1">
@@ -82,7 +69,7 @@ export default function UserSidebar({ collapsed = false, onToggle }) {
           </MDBCardText>
           <div className="d-grid gap-1 mb-2">
             {navItem("/account/orders", "Orders")}
-            {navItem("/account/wishlist", "Wishlist")}
+            {/* {navItem("/account/wishlist", "Wishlist")} */}
           </div>
 
           <MDBCardText className="text-uppercase text-muted small px-2 mt-3 mb-1">
@@ -101,13 +88,13 @@ export default function UserSidebar({ collapsed = false, onToggle }) {
             {navItem("/account/forgot-password", "Forgot Password")}
           </div>
 
-          <MDBCardText className="text-uppercase text-muted small px-2 mt-3 mb-1">
+          {/* <MDBCardText className="text-uppercase text-muted small px-2 mt-3 mb-1">
             Support
           </MDBCardText>
           <div className="d-grid gap-1 mb-3">
             {navItem("/account/tickets", "Support Tickets")}
             {navItem("/help", "Help Center")}
-          </div>
+          </div> */}
 
           <div className="border-top pt-2 pb-3 px-2">
             {navItem("/logout", "Logout")}

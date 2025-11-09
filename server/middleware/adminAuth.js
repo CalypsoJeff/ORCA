@@ -11,3 +11,6 @@ const verifyAdmin = (req, res, next) => {
         res.status(401).json({ error: "Unauthorized" });
     }
 };
+
+
+export { verifyAdmin };

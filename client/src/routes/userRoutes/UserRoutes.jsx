@@ -21,6 +21,7 @@ import RidersPage from "../../pages/user/RidersPage";
 import OrderDetails from "../../pages/user/OrderDetails";
 import UserOrders from "../../pages/user/UserOrders";
 import OrderSuccess from "../../pages/user/OrderSuccess";
+import Addresses from "../../pages/user/Addresses";
 
 const UserRoutes = () => {
   return (
@@ -36,6 +37,9 @@ const UserRoutes = () => {
       <Route element={<UserPrivateRoutes />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/account/profile" element={<UserProfile />} />
+        <Route path="/account/addresses" element={<Addresses />} />
+        
+
         {/* <Route path="/account/dashboard" element={<AccountDashboard />} /> */}
         <Route path="/account/orders" element={<UserOrders />} />
         <Route path="/account/orders/:orderId" element={<OrderDetails />} />

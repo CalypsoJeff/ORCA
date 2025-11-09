@@ -9,18 +9,18 @@ import { toast } from "react-toastify";
 import { FcGoogle } from "react-icons/fc";
 import { Eye, EyeOff } from "lucide-react";
 import { loginAsync } from "../../features/auth/authSlice";
+import api from "../../api/middlewares/interceptor";
+import { signInWithGoogle } from "../../firebase/firebase";
 
 export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state) => state.auth);
-  const [showPassword, setShowPassword] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
+  const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm();
 
   const onSubmit = async (data) => {
     try {
@@ -36,10 +36,20 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    console.log("Google login clicked");
-    toast.info("Google login will be implemented soon");
-  };
+  async function handleGoogleAuth() {
+    try {
+      setGoogleLoading(true);
+      const { idToken } = await signInWithGoogle();
+      const { data } = await api.post("/api/auth/google", { idToken });
+      // { user, token, refreshToken } (or cookies if your API sets them)
+      toast.success("Signed in with Google");
+      navigate("/home");
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Google login failed");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   return (
     <div className="flex min-h-screen w-full">
@@ -48,19 +58,18 @@ export default function Login() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Welcome back</h1>
-            <p className="mt-2 text-sm text-gray-500">
-              Please enter your details to sign in
-            </p>
+            <p className="mt-2 text-sm text-gray-500">Please enter your details to sign in</p>
           </div>
 
           <div className="mt-8 space-y-6">
-            <Button 
-              onClick={handleGoogleLogin}
-              variant="outline" 
+            <Button
+              onClick={handleGoogleAuth}            
+              variant="outline"
               className="w-full flex items-center justify-center gap-2 py-5 font-medium"
+              disabled={googleLoading}
             >
               <FcGoogle size={20} />
-              <span>Continue with Google</span>
+              <span>{googleLoading ? "Connecting…" : "Continue with Google"}</span>
             </Button>
 
             <div className="relative">
@@ -81,18 +90,13 @@ export default function Login() {
                   id="phone"
                   type="text"
                   placeholder="Enter your phone number"
-                  className={`w-full ${errors.phone ? 'border-red-500' : ''}`}
+                  className={`w-full ${errors.phone ? "border-red-500" : ""}`}
                   {...register("phone", {
                     required: "Phone number is required",
-                    pattern: {
-                      value: /^[0-9\b]+$/,
-                      message: "Invalid phone number format",
-                    },
+                    pattern: { value: /^[0-9\b]+$/, message: "Invalid phone number format" },
                   })}
                 />
-                {errors.phone && (
-                  <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>
-                )}
+                {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>}
               </div>
 
               <div className="space-y-2">
@@ -109,13 +113,10 @@ export default function Login() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className={`w-full pr-10 ${errors.password ? 'border-red-500' : ''}`}
+                    className={`w-full pr-10 ${errors.password ? "border-red-500" : ""}`}
                     {...register("password", {
                       required: "Password is required",
-                      minLength: {
-                        value: 6,
-                        message: "Password must be at least 6 characters",
-                      },
+                      minLength: { value: 6, message: "Password must be at least 6 characters" },
                     })}
                   />
                   <button
@@ -126,18 +127,12 @@ export default function Login() {
                     {showPassword ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>
-                )}
+                {errors.password && <p className="text-sm text-red-600 mt-1">{errors.password.message}</p>}
               </div>
 
               {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 
-              <Button 
-                type="submit" 
-                className="w-full bg-sky-600 hover:bg-sky-700 text-white py-5"
-                disabled={loading}
-              >
+              <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-700 text-white py-5" disabled={loading}>
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
@@ -153,9 +148,11 @@ export default function Login() {
       </div>
 
       {/* Right Panel - Image */}
-      <div className="hidden md:block md:w-1/2 bg-cover bg-center" 
-        style={{ 
-          backgroundImage: "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
+      <div
+        className="hidden md:block md:w-1/2 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')",
         }}
       >
         <div className="h-full flex flex-col justify-center items-center p-12 text-white">
@@ -166,15 +163,15 @@ export default function Login() {
             </p>
             <div className="flex flex-col space-y-4">
               <div className="flex items-center space-x-2">
-                <div className="h-1 w-1 rounded-full bg-sky-400"></div>
+                <div className="h-1 w-1 rounded-full bg-sky-400" />
                 <p>Access exclusive events and competitions</p>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="h-1 w-1 rounded-full bg-sky-400"></div>
+                <div className="h-1 w-1 rounded-full bg-sky-400" />
                 <p>Connect with riders from around the world</p>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="h-1 w-1 rounded-full bg-sky-400"></div>
+                <div className="h-1 w-1 rounded-full bg-sky-400" />
                 <p>Discover new routes and challenges</p>
               </div>
             </div>

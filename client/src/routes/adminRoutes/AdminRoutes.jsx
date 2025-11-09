@@ -1,6 +1,5 @@
 import { Route, Routes } from "react-router-dom";
 import Home from "../../pages/user/Home";
-// import Profile from "../../pages/user/Profile";
 import AdminLogin from "../../pages/admin/Login";
 import AdminRegister from "../../pages/admin/Register";
 import VerifyOtpPage from "../../pages/admin/Otp-Verify";
@@ -14,7 +13,8 @@ import UserList from "../../pages/admin/UserList";
 import { NotFoundPage } from "../../components/ui/404-page-not-found";
 import PendingApproval from "../../pages/admin/PendingApproval";
 import AdminRequests from "../../pages/admin/AdminRequests";
-
+import OrdersList from "../../pages/admin/OrdersList";
+import OrderDetails from "../../pages/admin/OrderDetails";
 // import UserPrivateRoutes from "./UserPrivateRoutes";
 
 const AdminRoutes = () => {
@@ -26,7 +26,6 @@ const AdminRoutes = () => {
       <Route path="/register" element={<AdminRegister />} />
       <Route path="/otp" element={<VerifyOtpPage />} />
       <Route path="*" element={<NotFoundPage />} />
-
       {/* Private Routes */}
       {/* <Route element={<UserPrivateRoutes />}> */}
       <Route path="/" element={<Home />} />
@@ -38,7 +37,8 @@ const AdminRoutes = () => {
       <Route path="/category" element={<Category />} />
       <Route path="/products" element={<Product />} />
       <Route path="/userlist" element={<UserList />} />
-      {/* </Route> */}
+      <Route path="/orders" element={<OrdersList />} />
+      <Route path="/orders/:id" element={<OrderDetails />} />
     </Routes>
   );
 };

@@ -14,11 +14,9 @@ export default function OrderSuccess() {
   useEffect(() => {
     const fetchOrder = async () => {
       try {
-        // Optional: if you haven't created this API yet, comment this out
         const { data } = await api.get(`/api/orders/${orderId}`);
         setOrder(data);
       } catch (e) {
-        // Fallback: show minimal info even if API isn't ready
         setError(e?.response?.data?.error || "Could not load order.");
       } finally {
         setLoading(false);
@@ -27,8 +25,8 @@ export default function OrderSuccess() {
     fetchOrder();
   }, [orderId]);
 
-  const goHome = () => navigate("/");
-  const goOrders = () => navigate("/orders");
+  const goHome = () => navigate("/home");
+  const goOrders = () => navigate("/account/orders");
 
   return (
     <>
@@ -61,9 +59,10 @@ export default function OrderSuccess() {
               <div className="mt-2 text-red-600">{error}</div>
             ) : order ? (
               <>
+                {/* ✅ Payment details */}
                 <div className="flex justify-between text-sm mt-2">
                   <span className="text-gray-500">Payment Status</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-green-700">
                     {order.payment?.status || "PAID"}
                   </span>
                 </div>
@@ -77,33 +76,80 @@ export default function OrderSuccess() {
                 {order.payment?.razorpayPaymentId && (
                   <div className="flex justify-between text-sm mt-2">
                     <span className="text-gray-500">Payment ID</span>
-                    <span className="font-mono">
+                    <span className="font-mono text-xs">
                       {order.payment.razorpayPaymentId}
                     </span>
                   </div>
                 )}
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2">Items</h3>
-                  <ul className="space-y-2">
+
+                {/* ✅ Purchased items */}
+                <div className="mt-5">
+                  <h3 className="font-semibold mb-3">Purchased Items</h3>
+                  <ul className="divide-y divide-gray-200">
                     {(order.products || []).map((it, idx) => (
-                      <li key={idx} className="flex justify-between text-sm">
-                        <span className="text-gray-700">
-                          {it.product?.name || it.product} × {it.quantity}
-                          {it.size ? ` • ${it.size}` : ""}
-                          {it.color ? ` • ${it.color}` : ""}
+                      <li
+                        key={idx}
+                        className="flex items-center justify-between py-3"
+                      >
+                        <div className="flex items-center gap-3 text-sm">
+                          <img
+                            src={
+                              it.product?.images?.[0] ||
+                              "/placeholder-product.jpg"
+                            }
+                            alt={it.product?.name}
+                            className="w-12 h-12 object-cover rounded-md border"
+                          />
+                          <div>
+                            <p className="font-medium text-gray-800">
+                              {it.product?.name || "Product"}
+                            </p>
+                            <p className="text-gray-600 text-xs">
+                              Qty: {it.quantity}
+                              {it.size && ` • ${it.size}`}
+                              {it.color && (
+                                <>
+                                  {" "}
+                                  •{" "}
+                                  <span
+                                    className="inline-block w-3 h-3 rounded-full border"
+                                    style={{ backgroundColor: it.color }}
+                                  ></span>{" "}
+                                  {it.color}
+                                </>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          ₹{(it.price * it.quantity).toFixed(2)}
                         </span>
-                        <span>₹{(it.price * it.quantity).toFixed(2)}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
+
+                {/* ✅ Shipping Address */}
                 {order.address && (
-                  <div className="mt-4">
-                    <h3 className="font-semibold mb-1">Ship To</h3>
-                    <p className="text-sm text-gray-700">
-                      {order.address.street}, {order.address.city},{" "}
-                      {order.address.state}, {order.address.country} -{" "}
-                      {order.address.postalCode}
+                  <div className="mt-5">
+                    <h3 className="font-semibold mb-1">Shipping Address</h3>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      {order.address.name}
+                      <br />
+                      {order.address.addressLine1}
+                      {order.address.addressLine2 && (
+                        <>
+                          , <br />
+                          {order.address.addressLine2}
+                        </>
+                      )}
+                      <br />
+                      {order.address.city}, {order.address.state} -{" "}
+                      {order.address.pincode}
+                      <br />
+                      <span className="text-gray-600">
+                        Phone: {order.address.phone}
+                      </span>
                     </p>
                   </div>
                 )}
@@ -111,6 +157,7 @@ export default function OrderSuccess() {
             ) : null}
           </div>
 
+          {/* ✅ Navigation buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button onClick={goHome} className="bg-sky-600">
               Go to Home

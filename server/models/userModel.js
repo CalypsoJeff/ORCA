@@ -4,8 +4,9 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
   },
+
   email: {
     type: String,
     required: true,
@@ -13,86 +14,81 @@ const userSchema = new mongoose.Schema({
     trim: true,
     validate: {
       validator: (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
-      message: 'Invalid email format.'
-    }
+      message: 'Invalid email format.',
+    },
   },
+
   password: {
     type: String,
-    required: true,
     minlength: 8,
-    select: false
+    select: false,
+    required: function () {
+      // password required only if not Google login
+      return !this.provider || this.provider !== 'google';
+    },
   },
+
   phone: {
     type: String,
-    required: true,
     trim: true,
     validate: {
-      validator: (value) => /^[0-9]{10}$/.test(value),
-      message: 'Phone number must be a 10-digit number.'
-    }
-  },
-  addresses: [
-    {
-      street: { type: String, trim: true, required: true },
-      city: { type: String, trim: true, required: true },
-      state: { type: String, trim: true, required: true },
-      country: { type: String, trim: true, required: true },
-      postalCode: {
-        type: String,
-        trim: true,
-        validate: {
-          validator: (value) => /^[0-9]{5,6}$/.test(value),
-          message: 'Postal code must be 5-6 digits.'
-        }
+      validator: function (value) {
+        // only validate if phone is provided
+        return !value || /^[0-9]{10}$/.test(value);
       },
-      isDefault: { type: Boolean, default: false }
-    }
-  ],
+      message: 'Phone number must be a 10-digit number.',
+    },
+    required: function () {
+      // phone required only if not Google login
+      return !this.provider || this.provider !== 'google';
+    },
+  },
+
+  provider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local',
+  },
+
+  avatar: {
+    type: String,
+  },
+
   registeredCompetitions: [
     {
       competitionId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Competition'
+        ref: 'Competition',
       },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
+      registrationDate: { type: Date, default: Date.now },
+    },
   ],
+
   registeredTrekkingEvents: [
     {
       trekkingId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Trekking'
+        ref: 'Trekking',
       },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
+      registrationDate: { type: Date, default: Date.now },
+    },
   ],
+
   registeredBikeRides: [
     {
       rideId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'BikeRide'
+        ref: 'BikeRide',
       },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
+      registrationDate: { type: Date, default: Date.now },
+    },
   ],
+
   status: {
     type: String,
     enum: ['Active', 'Inactive', 'Banned'],
-    default: 'Active'
+    default: 'Active',
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);

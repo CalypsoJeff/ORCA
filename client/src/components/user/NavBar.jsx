@@ -1,44 +1,54 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Home,
   Trophy,
-  Users,
-  Mountain,
   ShoppingCart,
   LogOut,
   UserCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../features/auth/authSlice";
+import authInstanceAxios from "../../api/middlewares/interceptor"; // ✅ use your axios with token
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
+  const [cartCount, setCartCount] = useState(0); // 🟢 store cart item count
   const location = useLocation();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
+  const navigate = useNavigate();
 
+  // 🔹 Scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    dispatch(logout());
-  };
+  // 🔹 Fetch cart count when user logged in
+  useEffect(() => {
+    if (!user?._id) return;
+    const fetchCartCount = async () => {
+      try {
+        const res = await authInstanceAxios.get("/api/cart");
+        if (res.data?.items) {
+          setCartCount(res.data.items.length);
+        }
+      } catch (err) {
+        console.error("Error fetching cart count:", err);
+      }
+    };
+    fetchCartCount();
+  }, [user]);
 
+  const handleLogout = () => dispatch(logout());
   const isLandingPage = location.pathname === "/home";
 
   const navItems = [
     { name: "Home", url: "/home", icon: Home },
     { name: "Competitions", url: "/competitions", icon: Trophy },
-    { name: "Riders Group", url: "/rides", icon: Users },
-    { name: "Trekking/Exploration", url: "/trekking", icon: Mountain },
     { name: "Shop", url: "/shop", icon: ShoppingCart },
   ];
 
@@ -50,10 +60,15 @@ const NavBar = () => {
       )}
     >
       <div className="container mx-auto flex items-center justify-between">
-        <span className="text-2xl font-display font-bold tracking-tight text-sky-600">
+        {/* Brand */}
+        <span
+          className="text-2xl font-display font-bold tracking-tight text-sky-600 cursor-pointer"
+          onClick={() => navigate("/home")}
+        >
           ORCA
         </span>
 
+        {/* Nav links */}
         <nav className="hidden md:flex items-center space-x-8">
           {navItems.map(({ name, url, icon: Icon }) => (
             <Link
@@ -62,8 +77,8 @@ const NavBar = () => {
               className={cn(
                 "flex items-center text-sm font-medium transition-colors no-underline hover-link",
                 isLandingPage
-                  ? "text-white hover:text-orca-300"
-                  : "text-black hover:text-orca-600"
+                  ? "text-white hover:text-sky-300"
+                  : "text-black hover:text-sky-600"
               )}
             >
               {Icon && <Icon className="mr-2 h-4 w-4" />}
@@ -72,13 +87,35 @@ const NavBar = () => {
           ))}
         </nav>
 
+        {/* Right Section */}
         <div className="flex items-center space-x-4">
+          {/* 🛒 Cart Button */}
+          <button
+            onClick={() => navigate("/cart")}
+            className="relative flex items-center justify-center p-2 rounded-full bg-transparent hover:bg-sky-100 transition-all duration-200"
+            title="View Cart"
+          >
+            <ShoppingCart
+              className={cn(
+                "h-6 w-6 transition-colors",
+                isLandingPage
+                  ? "text-white hover:text-sky-200"
+                  : "text-sky-600 hover:text-sky-700"
+              )}
+            />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                {cartCount}
+              </span>
+            )}
+          </button>
+
+          {/* 👤 User Section */}
           {user ? (
             <div className="flex items-center space-x-2">
-              {/* Profile section with better styling */}
               <div className="flex items-center space-x-2 hover:bg-sky-100 rounded-full px-3 py-1.5 transition-all duration-200 shadow-sm hover:shadow-md">
                 <div
-                  onClick={() => (window.location.href = "/account/profile")}
+                  onClick={() => navigate("/account/profile")}
                   className="relative cursor-pointer"
                 >
                   <UserCircle className="h-6 w-6 text-sky-600 hover:text-sky-700 transition-colors" />
@@ -107,6 +144,8 @@ const NavBar = () => {
               Login / Signup
             </Link>
           )}
+
+          {/* ☰ Mobile Menu Button */}
           <button
             className="md:hidden rounded-md p-2"
             aria-label="Menu"

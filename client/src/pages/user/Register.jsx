@@ -9,6 +9,10 @@ import { toast } from "react-toastify";
 import { FcGoogle } from "react-icons/fc";
 import { Eye, EyeOff } from "lucide-react";
 import { registerUser } from "../../api/endpoints/auth/user-auth";
+import api from "../../api/middlewares/interceptor";
+import { signInWithGoogle } from "../../firebase/firebase";
+import { setAuthData } from "../../features/auth/authSlice";
+import Cookies from "js-cookie";
 
 export default function RegisterPage() {
   const dispatch = useDispatch();
@@ -35,10 +39,25 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+async function handleGoogleAuth() {
+  try {
+    const { idToken } = await signInWithGoogle();
+    const { data } = await api.post("/api/user/google", { idToken });
+    // { user, token, refreshToken }
 
-  const handleGoogleSignUp = () => {
-    toast.info("Google sign-up coming soon!");
-  };
+    // Save to cookies
+    Cookies.set("token", data.token);
+    Cookies.set("refreshToken", data.refreshToken);
+
+    // ✅ Dispatch to Redux
+    dispatch(setAuthData(data));
+
+    toast.success("Signed in with Google");
+    navigate("/home");
+  } catch (e) {
+    toast.error(e?.response?.data?.error || "Google login failed");
+  }
+}
 
   return (
     <div className="flex min-h-screen w-full">
@@ -56,7 +75,7 @@ export default function RegisterPage() {
 
           <div className="mt-8 space-y-6">
             <Button
-              onClick={handleGoogleSignUp}
+              onClick={handleGoogleAuth}
               variant="outline"
               className="w-full flex items-center justify-center gap-2 py-5 font-medium"
             >

@@ -6,6 +6,9 @@ import productController from '../controllers/productController.js';
 import competitionController from '../controllers/competitionController.js';
 import trekkingController from '../controllers/trekkingController.js';
 import fitnessController from '../controllers/fitnessController.js';
+import gymOwnerController from '../controllers/gymOwnerController.js';
+import { verifyAdmin } from '../middleware/adminAuth.js';
+
 const router = express.Router();
 const storage = multer.memoryStorage();
 
@@ -27,6 +30,12 @@ router.post('/resend-otp', adminController.resendOTP);
 router.get('/pending-admin-requests', adminController.getPendingAdminRequests);
 router.patch('/approve-admin-request/:id', adminController.approveAdminRequest);
 router.patch('/reject-admin-request/:id', adminController.rejectAdminRequest);
+
+// ---------------------- Gym Owner Management ----------------------
+router.get('/gym-owners/pending', verifyAdmin, gymOwnerController.getPendingGymOwners);
+router.get('/gym-owners/:id', verifyAdmin, gymOwnerController.getGymOwnerById);
+router.patch('/gym-owners/:id/approve', verifyAdmin, gymOwnerController.approveGymOwner);
+router.patch('/gym-owners/:id/reject', verifyAdmin, gymOwnerController.rejectGymOwner);
 
 // Competitions
 router.get('/competitions', competitionController.loadCompetitionsPage);
@@ -59,5 +68,6 @@ router.patch('/user/unblock', adminController.unblockUser);
 // Fitness
 router.post('/add-fitness', fitnessController.addFitness);
 router.post('/add-fitness-category', fitnessController.addFitnessCategory);
+
 
 export default router;

@@ -185,12 +185,6 @@ const resendOTP = async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
-
-
-
-
 const getUsers = async (req, res) => {
   try {
     // Fetch all users from the database
@@ -214,10 +208,6 @@ const getUsers = async (req, res) => {
     });
   }
 };
-
-
-
-
 const blockUser = async (req, res) => {
   try {
     const { phone } = req.body;
@@ -272,14 +262,12 @@ const unblockUser = async (req, res) => {
         message: 'User not found.',
       });
     }
-
     // Check if the user is already active
     if (user.status === 'Active') {
       return res.status(400).json({
         message: 'User is already active.',
       });
     }
-
     // Update the user's status to 'Active'
     user.status = 'Active';
 
@@ -298,13 +286,6 @@ const unblockUser = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
 const getPendingAdminRequests = async (req, res) => {
   try {
     const pendingAdmins = await Admin.find({ status: "pending" });
@@ -346,7 +327,6 @@ export const rejectAdminRequest = async (req, res) => {
       return res.status(404).json({ error: "Admin not found" });
     }
     await Admin.deleteOne({ _id: id });
-
     return res.status(200).json({ message: "Admin request rejected and deleted successfully" });
   } catch (err) {
     console.error("Error rejecting admin request:", err);

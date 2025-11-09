@@ -11,12 +11,14 @@ import { dbConnect } from './config/DB.js'; // Assuming DB.js has a named export
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import addressRoutes from './routes/addressRoutes.js';
+import gymOwnerRoutes from './routes/gymOwnerRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3030;
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -44,9 +46,12 @@ app.use(express.static(path.join(__dirname, "client/build")));
 
 // Routes
 app.use("/api/user", userRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api", paymentRoutes);
 app.use("/api", orderRoutes);
+app.use("/api", paymentRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/user", addressRoutes);
+app.use("/api/gym-owner", gymOwnerRoutes);
+
 
 // React SPA fallback
 app.get("*", (req, res) => {

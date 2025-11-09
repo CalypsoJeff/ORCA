@@ -17,34 +17,36 @@ import {
 import NavBar from "../../components/user/NavBar";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 import UserSidebar from "../../components/user/UserSidebar";
-// import { api } from "../../api"; // <-- use your real API client
+import api from "../../api/middlewares/interceptor"; // <-- your central axios instance
 
 const STATUS_OPTIONS = [
   { label: "All", value: "ALL" },
-  { label: "Pending", value: "PENDING" },
-  { label: "Processing", value: "PROCESSING" },
-  { label: "Shipped", value: "SHIPPED" },
-  { label: "Delivered", value: "DELIVERED" },
-  { label: "Cancelled", value: "CANCELLED" },
+  { label: "Pending", value: "Pending" },
+  { label: "Confirmed", value: "Confirmed" },
+  { label: "Out for Delivery", value: "Out for Delivery" },
+  { label: "Shipped", value: "Shipped" },
+  { label: "Delivered", value: "Delivered" },
+  { label: "Cancelled", value: "Cancelled" },
 ];
 
 const statusBadgeColor = (s) => {
   switch (s) {
-    case "PENDING":
+    case "Pending":
       return "warning";
-    case "PROCESSING":
+    case "Confirmed":
       return "info";
-    case "SHIPPED":
+    case "Out for Delivery":
+      return "info";
+    case "Shipped":
       return "primary";
-    case "DELIVERED":
+    case "Delivered":
       return "success";
-    case "CANCELLED":
+    case "Cancelled":
       return "danger";
     default:
       return "secondary";
   }
 };
-
 const formatINR = (n) => `₹${Number(n || 0).toFixed(2)}`;
 
 // Mobile card for an order
@@ -54,8 +56,17 @@ function OrderCard({ order }) {
       <MDBCardBody>
         <div className="d-flex justify-content-between align-items-start">
           <div>
-            <div className="fw-bold">#{order.orderId}</div>
-            <div className="text-muted small">{order.date}</div>
+            <div className="fw-bold">#{order._id}</div>
+            <div className="text-muted small">
+              {new Date(order.createdAt || order.orderDate).toLocaleDateString(
+                "en-IN",
+                {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                }
+              )}
+            </div>
           </div>
           <MDBBadge color={statusBadgeColor(order.status)} className="ms-2">
             {order.status}
@@ -64,15 +75,17 @@ function OrderCard({ order }) {
 
         <div className="mt-2">
           <MDBCardText className="mb-1">
-            <span className="text-muted">Items:</span> {order.itemsCount}
+            <span className="text-muted">Items:</span>{" "}
+            {(order.products || []).reduce((s, p) => s + (p.quantity || 0), 0)}
           </MDBCardText>
           <MDBCardText className="mb-1">
-            <span className="text-muted">Total:</span> {formatINR(order.total)}
+            <span className="text-muted">Total:</span>{" "}
+            {formatINR(order.grandTotal)}
           </MDBCardText>
         </div>
 
         <div className="d-flex justify-content-end mt-2">
-          <Link to={`/account/orders/${order.orderId}`}>
+          <Link to={`/account/orders/${order._id}`}>
             <MDBBtn size="sm">View</MDBBtn>
           </Link>
         </div>
@@ -82,74 +95,99 @@ function OrderCard({ order }) {
 }
 
 export default function UserOrders() {
-  // UI state
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [serverTotal, setServerTotal] = useState(0);
+
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
 
-  // pagination
+  // server-side pagination
   const [page, setPage] = useState(1);
   const pageSize = 8;
 
-  // TODO: swap mock with your API call
+  // fetch from server whenever page/status changes
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(async () => {
-      // Example real call:
-      // const { data } = await api.get("/orders/me");
-      // setOrders(data);
+    let abort = false;
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const params = {
+          page,
+          limit: pageSize,
+          ...(status !== "ALL" ? { status } : {}),
+        };
+        const { data } = await api.get("/api/orders", { params });
+        // data: { items, page, limit, total, hasMore }
+        if (!abort) {
+          setOrders(data.items || []);
+          setServerTotal(data.total || 0);
+        }
+      } catch (e) {
+        if (!abort) {
+          setOrders([]);
+          setServerTotal(0);
+          console.error(
+            "Failed to load orders:",
+            e?.response?.data || e.message
+          );
+        }
+      } finally {
+        if (!abort) setLoading(false);
+      }
+    };
+    fetchOrders();
+    return () => {
+      abort = true;
+    };
+  }, [page, status]);
 
-      // Mock data for now:
-      const fake = Array.from({ length: 27 }).map((_, i) => ({
-        orderId: 100000 + i,
-        date: new Date(Date.now() - i * 86400000).toLocaleDateString("en-IN", {
+  // client-side filter for quick search (by id/date)
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return orders;
+    return (orders || []).filter((o) => {
+      const idMatch = String(o._id).toLowerCase().includes(q);
+      const dateStr = new Date(o.createdAt || o.orderDate)
+        .toLocaleDateString("en-IN", {
           day: "2-digit",
           month: "short",
           year: "numeric",
-        }),
-        itemsCount: Math.floor(Math.random() * 4) + 1,
-        total: Math.floor(500 + Math.random() * 5000),
-        status: ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"][
-          i % 5
-        ],
-      }));
-      setOrders(fake);
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(t);
-  }, []);
-
-  // filtering
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return orders.filter((o) => {
-      const matchesStatus = status === "ALL" ? true : o.status === status;
-      const matchesQuery =
-        !q ||
-        String(o.orderId).toLowerCase().includes(q) ||
-        o.date.toLowerCase().includes(q);
-      return matchesStatus && matchesQuery;
+        })
+        .toLowerCase();
+      const dateMatch = dateStr.includes(q);
+      return idMatch || dateMatch;
     });
-  }, [orders, query, status]);
+  }, [orders, query]);
 
-  // pagination calc
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageSlice = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, currentPage]);
-
+  // when filters change that affect server fetch, reset page to 1
   useEffect(() => {
     setPage(1);
-  }, [query, status]);
+  }, [status]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(
+      status === "ALL" && !query
+        ? serverTotal / pageSize
+        : filtered.length / pageSize
+    )
+  );
+  const currentPage = Math.min(page, totalPages);
+
+  // if user is searching, paginate the filtered current page (client-only)
+  const pageSlice = useMemo(() => {
+    if (query) {
+      const start = (currentPage - 1) * pageSize;
+      return filtered.slice(start, start + pageSize);
+    }
+    return filtered; // when not searching, filtered === current server page
+  }, [filtered, currentPage]);
 
   return (
     <>
       <NavBar />
       <PageBreadcrumbs />
-
       <section style={{ backgroundColor: "#eee", marginTop: "100px" }}>
         <MDBContainer className="py-10">
           <MDBRow>
@@ -158,7 +196,7 @@ export default function UserOrders() {
               <UserSidebar />
             </MDBCol>
 
-            {/* RIGHT: Orders Content */}
+            {/* RIGHT: Orders */}
             <MDBCol lg="9">
               {/* Header + Filters */}
               <MDBRow className="gy-3 align-items-end">
@@ -173,7 +211,10 @@ export default function UserOrders() {
                   <MDBInput
                     label="Search by Order ID / Date"
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setPage(1);
+                    }}
                   />
                 </MDBCol>
 
@@ -206,7 +247,7 @@ export default function UserOrders() {
                         <span className="visually-hidden">Loading...</span>
                       </MDBSpinner>
                     </div>
-                  ) : filtered.length === 0 ? (
+                  ) : pageSlice.length === 0 ? (
                     <MDBCard className="mt-3">
                       <MDBCardBody className="text-center">
                         <div className="fw-semibold mb-1">No orders found</div>
@@ -225,7 +266,7 @@ export default function UserOrders() {
                               <table className="table mb-0 align-middle">
                                 <thead className="table-light">
                                   <tr>
-                                    <th style={{ width: 160 }}>Order ID</th>
+                                    <th style={{ width: 260 }}>Order ID</th>
                                     <th>Date</th>
                                     <th>Items</th>
                                     <th>Total</th>
@@ -240,13 +281,24 @@ export default function UserOrders() {
                                 </thead>
                                 <tbody>
                                   {pageSlice.map((o) => (
-                                    <tr key={o.orderId}>
-                                      <td className="fw-semibold">
-                                        #{o.orderId}
+                                    <tr key={o._id}>
+                                      <td className="fw-semibold">#{o._id}</td>
+                                      <td>
+                                        {new Date(
+                                          o.createdAt || o.orderDate
+                                        ).toLocaleDateString("en-IN", {
+                                          day: "2-digit",
+                                          month: "short",
+                                          year: "numeric",
+                                        })}
                                       </td>
-                                      <td>{o.date}</td>
-                                      <td>{o.itemsCount}</td>
-                                      <td>{formatINR(o.total)}</td>
+                                      <td>
+                                        {(o.products || []).reduce(
+                                          (s, p) => s + (p.quantity || 0),
+                                          0
+                                        )}
+                                      </td>
+                                      <td>{formatINR(o.grandTotal)}</td>
                                       <td>
                                         <MDBBadge
                                           color={statusBadgeColor(o.status)}
@@ -255,9 +307,7 @@ export default function UserOrders() {
                                         </MDBBadge>
                                       </td>
                                       <td className="text-end">
-                                        <Link
-                                          to={`/account/orders/${o.orderId}`}
-                                        >
+                                        <Link to={`/account/orders/${o._id}`}>
                                           <MDBBtn size="sm">View</MDBBtn>
                                         </Link>
                                       </td>
@@ -273,19 +323,35 @@ export default function UserOrders() {
                       {/* Mobile CARDS */}
                       <div className="d-md-none">
                         {pageSlice.map((o) => (
-                          <OrderCard key={o.orderId} order={o} />
+                          <OrderCard key={o._id} order={o} />
                         ))}
                       </div>
 
                       {/* Pagination */}
                       <div className="d-flex justify-content-between align-items-center mt-3">
                         <div className="text-muted small">
-                          Showing{" "}
-                          <strong>{(currentPage - 1) * pageSize + 1}</strong> -{" "}
-                          <strong>
-                            {Math.min(currentPage * pageSize, filtered.length)}
-                          </strong>{" "}
-                          of <strong>{filtered.length}</strong>
+                          {query ? (
+                            <>
+                              Showing{" "}
+                              <strong>
+                                {(currentPage - 1) * pageSize + 1}
+                              </strong>{" "}
+                              -{" "}
+                              <strong>
+                                {Math.min(
+                                  currentPage * pageSize,
+                                  filtered.length
+                                )}
+                              </strong>{" "}
+                              of <strong>{filtered.length}</strong>
+                            </>
+                          ) : (
+                            <>
+                              Page <strong>{currentPage}</strong> of{" "}
+                              <strong>{totalPages}</strong> • Total orders:{" "}
+                              <strong>{serverTotal}</strong>
+                            </>
+                          )}
                         </div>
                         <div className="d-flex align-items-center gap-2">
                           <MDBBtn

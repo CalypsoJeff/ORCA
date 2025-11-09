@@ -1,46 +1,60 @@
-// src/pages/user/CheckoutPage.jsx
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "flowbite-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // ✅ Added Link
 import NavBar from "../../components/user/NavBar";
 import { loadCart } from "../../api/endpoints/products/user-products";
-import axios from "axios";
+import authInstanceAxios from "../../api/middlewares/interceptor";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
+
   const [cartItems, setCartItems] = useState([]);
+  const [addresses, setAddresses] = useState([]);
   const [selectedAddressIndex, setSelectedAddressIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const api = axios.create({
-    baseURL: "https://orca-1-nie0.onrender.com",
-    withCredentials: true,
-    headers: { "Content-Type": "application/json" },
-  });
+
+  // 🔹 Fetch Cart
+  const fetchCart = async () => {
+    try {
+      setLoading(true);
+      const res = await loadCart();
+      if (res.data?.items) setCartItems(res.data.items);
+    } catch (err) {
+      console.error("Error loading cart", err);
+      toast.error("Failed to load cart");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Fetch Addresses
+  const fetchAddresses = async () => {
+    try {
+      const res = await authInstanceAxios.get("/api/user/addresses");
+      setAddresses(res.data);
+    } catch (error) {
+      console.error("Error loading addresses", error);
+      toast.error("Failed to load addresses");
+    }
+  };
 
   useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        const res = await loadCart();
-        if (res.data?.items) setCartItems(res.data.items);
-      } catch (err) {
-        console.error("Error loading cart", err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCart();
+    fetchAddresses();
   }, []);
 
+  // 🔹 Calculate Total
   const totalPrice = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
-  // --- load Razorpay SDK on demand ---
   const loadRazorpayScript = () =>
     new Promise((resolve) => {
       if (window.Razorpay) return resolve(true);
@@ -57,17 +71,14 @@ const CheckoutPage = () => {
       const ok = await loadRazorpayScript();
       if (!ok) throw new Error("Failed to load Razorpay SDK");
 
-      // 1) Create Razorpay order on your API
-      const { data: payload } = await api.post(
+      const { data: payload } = await authInstanceAxios.post(
         "/api/payments/razorpay/create-order",
-        { addressId, userId: user?._id } // send userId if req.user isn't set by middleware
+        { addressId, userId: user?._id }
       );
-      // payload: { key, amount, currency, razorpayOrderId, orderId }
 
-      // 2) Open Razorpay checkout
       const options = {
         key: payload.key,
-        amount: payload.amount, // paise
+        amount: payload.amount,
         currency: payload.currency,
         order_id: payload.razorpayOrderId,
         name: "ORCA E-Commerce",
@@ -77,40 +88,35 @@ const CheckoutPage = () => {
           email: user?.email || "",
           contact: user?.phone || "",
         },
-        notes: { app: "ecommerce", orderId: String(payload.orderId) },
+        notes: { orderId: String(payload.orderId) },
         theme: { color: "#0ea5e9" },
         handler: async (resp) => {
           try {
-            const { data } = await api.post(
+            const { data } = await authInstanceAxios.post(
               "/api/payments/razorpay/verify",
               resp
             );
             if (data.status === "success") {
               navigate(`/order/success/${data.orderId}`);
             } else {
-              alert(data.error || "Payment verification failed");
+              toast.error(data.error || "Payment verification failed");
             }
           } catch (e) {
             console.error(e);
-            alert(e?.response?.data?.error || "Payment verification failed");
+            toast.error("Payment verification failed");
           }
-        },
-        modal: {
-          ondismiss: () => {
-            // optional
-          },
         },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", (err) => {
         console.error("Payment failed:", err?.error);
-        alert(err?.error?.description || "Payment failed. Please try again.");
+        toast.error("Payment failed. Please try again.");
       });
       rzp.open();
     } catch (err) {
       console.error(err);
-      alert(
+      toast.error(
         err?.response?.data?.error || err.message || "Unable to start payment"
       );
     } finally {
@@ -118,61 +124,104 @@ const CheckoutPage = () => {
     }
   };
 
-  // --- main handler ---
-  const handleConfirmOrder = () => {
-    const selectedAddress = user?.addresses?.[selectedAddressIndex];
-    const addressId = selectedAddress?._id || selectedAddress?.id;
+  const handleConfirmOrder = async () => {
+    const selectedAddress = addresses[selectedAddressIndex];
+    const addressId = selectedAddress?._id;
 
     if (!selectedAddress || !addressId) {
-      alert("Please select a valid shipping address.");
+      toast.warn("Please select a valid shipping address.");
       return;
     }
 
     if (paymentMethod === "cod") {
-      // Optional: call a /orders/create-cod endpoint to place order without payment
-      alert("Order placed with Cash on Delivery!");
-      // navigate("/orders"); // or go to an order confirmation page
+      try {
+        setPaying(true);
+        const { data } = await authInstanceAxios.post(
+          "/api/orders/create-cod",
+          { addressId }
+        );
+        navigate(`/order/success/${data.orderId}`);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to place COD order");
+      } finally {
+        setPaying(false);
+      }
       return;
     }
 
-    // Razorpay flow
     payWithRazorpay(addressId);
   };
 
   return (
     <>
       <NavBar />
-      <div className="container mx-auto mt-28 px-4">
+      <ToastContainer position="top-right" autoClose={2000} />
+
+      {/* 🔹 Breadcrumbs */}
+      <div className="max-w-6xl mx-auto mt-28 mb-4 px-4">
+        <nav className="text-sm text-gray-500" aria-label="Breadcrumb">
+          <ol className="list-reset flex">
+            <li>
+              <Link
+                to="/home"
+                className="text-sky-600 hover:underline hover:text-sky-700"
+              >
+                Home
+              </Link>
+            </li>
+            <li>
+              <span className="mx-2">/</span>
+            </li>
+            <li>
+              <Link
+                to="/cart"
+                className="text-sky-600 hover:underline hover:text-sky-700"
+              >
+                Cart
+              </Link>
+            </li>
+            <li>
+              <span className="mx-2">/</span>
+            </li>
+            <li className="text-gray-700 font-medium">Checkout</li>
+          </ol>
+        </nav>
+      </div>
+
+      <div className="container mx-auto px-4 mb-16">
         <h1 className="text-3xl font-bold mb-6">Checkout</h1>
 
         {loading ? (
-          <p>Loading cart...</p>
+          <p>Loading checkout details...</p>
         ) : (
           <>
-            {/* Address Selection */}
+            {/* 🔹 Address Selection */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-2">
                 Select Shipping Address
               </h2>
-              {user?.addresses?.length ? (
+              {addresses.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-                    {user.addresses.map((addr, index) => (
+                    {addresses.map((addr, index) => (
                       <div
-                        key={addr._id || index}
-                        className={`border rounded-md p-4 cursor-pointer ${
+                        key={addr._id}
+                        className={`border rounded-md p-4 cursor-pointer transition-all ${
                           selectedAddressIndex === index
-                            ? "border-blue-600 bg-blue-200"
-                            : "border-gray-300"
+                            ? "border-sky-600 bg-sky-50"
+                            : "border-gray-300 hover:border-sky-400"
                         }`}
                         onClick={() => setSelectedAddressIndex(index)}
                       >
-                        <p>
-                          {addr.street}, {addr.city}, {addr.state},{" "}
-                          {addr.country} - {addr.postalCode}
+                        <p className="font-medium text-gray-800">{addr.name}</p>
+                        <p className="text-sm text-gray-600">
+                          {addr.addressLine1}, {addr.city}, {addr.state} -{" "}
+                          {addr.pincode}
                         </p>
+                        <p className="text-sm text-gray-500">{addr.phone}</p>
                         {addr.isDefault && (
-                          <span className="text-sm text-green-600">
+                          <span className="text-xs text-green-600 font-medium">
                             Default
                           </span>
                         )}
@@ -184,7 +233,7 @@ const CheckoutPage = () => {
                     <Button
                       className="bg-sky-600"
                       size="sm"
-                      onClick={() => navigate("/profile")}
+                      onClick={() => navigate("/account/addresses")}
                     >
                       + Add New Address
                     </Button>
@@ -194,8 +243,8 @@ const CheckoutPage = () => {
                 <div className="text-gray-500">
                   No saved addresses.{" "}
                   <button
-                    onClick={() => navigate("/profile")}
-                    className="text-blue-600 underline"
+                    onClick={() => navigate("/account/profile")}
+                    className="text-sky-600 underline"
                   >
                     Add one
                   </button>
@@ -203,53 +252,50 @@ const CheckoutPage = () => {
               )}
             </div>
 
-            {/* Product Summary */}
+            {/* 🔹 Order Summary */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-2">Order Summary</h2>
-              <div className="space-y-4">
-                {cartItems.map((item) => (
-                  <div
-                    key={item._id}
-                    className="flex gap-4 items-center border rounded-lg p-4 shadow-sm"
-                  >
-                    <img
-                      src={item.productId?.images?.[0] || "/placeholder.jpg"}
-                      alt={item.productId?.name}
-                      className="w-20 h-20 object-cover rounded-md"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">
-                        {item.productId?.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Size: {item.size} | Color:{" "}
-                        <span
-                          className="inline-block w-4 h-4 rounded-full border"
-                          style={{ backgroundColor: item.color }}
-                        />{" "}
-                        {item.color}
-                      </p>
-                      <div className="flex justify-between items-center text-sm text-gray-500">
-                        <span>Quantity: {item.quantity}</span>
-                        <span className="font-medium text-gray-800">
-                          ₹{item.price} × {item.quantity} = ₹
-                          {item.price * item.quantity}
-                        </span>
-                      </div>
+              {cartItems.map((item) => (
+                <div
+                  key={item._id}
+                  className="flex gap-4 items-center border rounded-lg p-4 shadow-sm mb-2"
+                >
+                  <img
+                    src={item.productId?.images?.[0] || "/placeholder.jpg"}
+                    alt={item.productId?.name}
+                    className="w-24 h-24 object-cover rounded-md"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">
+                      {item.productId?.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Size: {item.size} | Color:{" "}
+                      <span
+                        className="inline-block w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: item.color }}
+                      />{" "}
+                      {item.color}
+                    </p>
+                    <div className="flex justify-between text-sm text-gray-500">
+                      <span>Qty: {item.quantity}</span>
+                      <span className="font-medium text-gray-800">
+                        ₹{item.price} × {item.quantity} = ₹
+                        {item.price * item.quantity}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
-
+                </div>
+              ))}
               <div className="mt-4 font-bold text-lg">
                 Total: ₹{totalPrice.toFixed(2)}
               </div>
             </div>
 
-            {/* Payment Method */}
+            {/* 🔹 Payment Method */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold mb-2">Payment Method</h2>
-              <label className="mr-4">
+              <label className="mr-4 cursor-pointer">
                 <input
                   type="radio"
                   name="payment"
@@ -259,7 +305,7 @@ const CheckoutPage = () => {
                 />
                 <span className="ml-2">Cash on Delivery</span>
               </label>
-              <label className="ml-6">
+              <label className="ml-6 cursor-pointer">
                 <input
                   type="radio"
                   name="payment"
@@ -271,7 +317,7 @@ const CheckoutPage = () => {
               </label>
             </div>
 
-            {/* Confirm Button */}
+            {/* 🔹 Confirm Button */}
             <div className="text-center">
               <Button
                 className="bg-sky-600"

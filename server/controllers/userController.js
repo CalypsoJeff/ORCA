@@ -2,20 +2,18 @@ import bcrypt from 'bcrypt';
 import redis from "../helper/redisClient.js";
 import { generateOTP, sendOTP } from "../helper/twiloOtp.js";
 import User from '../models/userModel.js';
-import { OAuth2Client } from "google-auth-library";
 import Competition from '../models/competitionsModel.js';
 import Trekking from '../models/trekkingModel.js';
 import products from '../models/productModel.js';
 import Cart from '../models/cartModel.js';
 import { generateResetToken, generateToken, validateResetToken } from '../helper/jwtHelper.js';
 import Product from '../models/productModel.js';
+import admin from "../config/firebaseAdmin.js";
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const loginUser = async (req, res) => {
   try {
     console.log("User login started");
     const { phone, password } = req.body;
-
     // Validate input
     if (!phone || !password) {
       return res.status(400).json({ error: "Phone and password are required." });
@@ -68,11 +66,6 @@ const loginUser = async (req, res) => {
     res.status(500).json({ error: "An error occurred during login. Please try again later." });
   }
 };
-
-
-
-
-
 // Register User and Send OTP
 const registerUser = async (req, res) => {
   try {
@@ -82,14 +75,11 @@ const registerUser = async (req, res) => {
     if (!name || !email || !password || !phone) {
       return res.status(400).json({ error: "All required fields must be filled." });
     }
-
     // Check if the email or phone number is already registered
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
     if (existingUser) {
       return res.status(400).json({ error: "Email or Mobile Number already registered." });
     }
-
-
     if (existingUser) {
       if (existingUser.status === 'Banned') {
         return res.status(400).json({
@@ -98,14 +88,11 @@ const registerUser = async (req, res) => {
       }
     }
     const otp = generateOTP();
-
     // Correctly set OTP with expiration time (300 seconds = 5 minutes)
     const otpResult = await redis.set(`otp:${phone}`, otp, 'EX', 300);
     console.log("OTP set successfully in Redis:", otpResult);
-
     // Send OTP via SMS (you may want to check here that the SMS was successfully sent)
     await sendOTP(phone, otp);
-
     // Temporarily store user data in Redis for verification later
     const userDataResult = await redis.set(
       `tempUser:${phone}`,
@@ -114,7 +101,6 @@ const registerUser = async (req, res) => {
       600 // 10-minute expiration time for user data
     );
     console.log("User data set successfully in Redis:", userDataResult);
-
     // Send response to client
     return res.status(200).json({
       message: "OTP sent successfully. Please verify to complete registration.",
@@ -126,38 +112,73 @@ const registerUser = async (req, res) => {
   }
 };
 
+export const googleAuth = async (req, res) => {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ error: "Missing Google ID token" });
 
+    // ✅ Verify the token using Firebase Admin
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const { email, name, picture } = decoded;
+
+    if (!email) {
+      return res.status(400).json({ error: "Email not available from Google" });
+    }
+
+    // 🔍 Find or create user
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        password: null,
+        phone: "",
+        provider: "google",
+        avatar: picture,
+        status: "Active",
+      });
+    } else if (user.status === "Banned") {
+      return res.status(403).json({ message: "Your account is banned. Please contact support." });
+    }
+
+    // 🪙 Generate JWT tokens for your app
+    const { token, refreshToken } = generateToken(user._id, user.phone, "user");
+
+    res.status(200).json({
+      message: "Google Auth successful",
+      token,
+      refreshToken,
+      user,
+    });
+  } catch (err) {
+    console.error("Google Auth Error:", err);
+    res.status(401).json({ error: "Invalid or expired Firebase ID token" });
+  }
+};
 const verifyOtpAndRegister = async (req, res) => {
   try {
     const { phone, otp } = req.body;
-
     // Validate input
     if (!phone || !otp) {
       return res.status(400).json({ error: "Phone number and OTP are required." });
     }
-
     // Retrieve the OTP from Redis
     const storedOtp = await redis.get(`otp:${phone}`);
     console.log("Stored OTP from Redis:", storedOtp);
-
     if (!storedOtp) {
       console.log(`No OTP found for phone number: ${phone}`);
       return res.status(400).json({ error: "OTP expired or not found. Please request a new OTP." });
     }
-
     // Verify the OTP
     if (storedOtp !== otp) {
       return res.status(400).json({ error: "Invalid OTP. Please try again." });
     }
-
     // Retrieve user details from Redis
     const userData = await redis.get(`tempUser:${phone}`);
     console.log("Retrieved userData from Redis:", userData); // Debug log
-
     if (!userData) {
       return res.status(400).json({ error: "User data expired. Please register again." });
     }
-
     // Parse the userData
     let parsedData;
     try {
@@ -166,13 +187,10 @@ const verifyOtpAndRegister = async (req, res) => {
       console.error("Failed to parse userData:", err);
       return res.status(500).json({ error: "Invalid user data stored. Please register again." });
     }
-
     const { name, email, password } = parsedData;
     console.log("Parsed Data:", name, email, password);
-
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
-
     // Create and save the user
     const newUser = new User({
       name,
@@ -181,14 +199,11 @@ const verifyOtpAndRegister = async (req, res) => {
       phone,
     });
     await newUser.save();
-
     // Generate JWT tokens
     const { token, refreshToken } = generateToken(name, email, "user");
-
     // Clean up Redis
     await redis.del(`otp:${phone}`);
     await redis.del(`tempUser:${phone}`);
-
     res.status(201).json({
       message: "Registration successful! Redirecting to home page.",
       token,
@@ -200,39 +215,25 @@ const verifyOtpAndRegister = async (req, res) => {
     res.status(500).json({ error: "Failed to verify OTP. Please try again later." });
   }
 };
-
-
-
-
-
-
-
-
 // Resend OTP
 const resendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
-
     // Validate phone number
     if (!phone) {
       return res.status(400).json({ error: "Phone number is required." });
     }
-
     // Check if user data exists in Redis
     const userData = await redis.get(`tempUser:${phone}`);
     if (!userData) {
       return res.status(400).json({ error: "User data expired. Please register again." });
     }
-
     // Generate a new OTP
     const otp = generateOTP();
-
     // Update OTP in Redis
     await redis.set(`otp:${phone}`, otp, "EX", 600);
-
     // Send OTP via SMS
     await sendOTP(phone, otp);
-
     res.status(200).json({ message: "OTP resent successfully." });
   } catch (error) {
     console.error("Error resending OTP:", error);
@@ -244,17 +245,13 @@ const loadHomePage = async (req, res) => {
   try {
     // Get logged-in user details from the request (assuming token is validated elsewhere)
     const user = req.user;  // Assuming user is attached to the request after token verification
-
     if (!user) {
       return res.status(401).json({ error: 'User not logged in' });
     }
-
     // Fetch all products, sorted by creation date (latest first)
     const allProducts = await products.find().sort({ createdAt: -1 });
-
     // Fetch all competitions, sorted by creation date (latest first)
     const allCompetitions = await competitions.find().sort({ createdAt: -1 });
-
     // Send the response with products, competitions, and logged-in user details
     res.status(200).json({
       message: 'Welcome to the Home Page!',
@@ -678,6 +675,7 @@ export default {
   registerUser,
   verifyOtpAndRegister,
   resendOtp,
+  googleAuth,
   loadHomePage,
   loadCompetitionsPage,
   loadCompetitionDetailsPage,

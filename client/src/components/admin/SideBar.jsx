@@ -26,6 +26,7 @@ const menuItems = [
   { icon: ActivityIcon, label: "Fitness", path: "/admin/fitness" },
   { icon: LayoutList, label: "Riders", path: "/admin/riders" },
   { icon: Calendar, label: "Bookings", path: "/admin/bookings" },
+  { icon: ShoppingCartIcon, label: "Orders", path: "/admin/orders" },
 ];
 
 export default function SideBar({ isOpen, toggleSidebar }) {

@@ -17,9 +17,9 @@ function InteractiveCheckout({ products = [] }) {
   const [cart, setCart] = useState([]);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
   useEffect(() => {
     if (!Array.isArray(products)) return;
-
     const normalized = products.map((item) => ({
       cartId: item._id,
       productId: item.productId._id,
@@ -31,30 +31,12 @@ function InteractiveCheckout({ products = [] }) {
       image: item.productId.images?.[0],
       category: item.productId.category,
     }));
-
     setCart(normalized);
   }, [products]);
-
-  const addToCart = (product) => {
-    setCart((currentCart) => {
-      const existingItem = currentCart.find(
-        (item) => item.productId === product.productId
-      );
-      if (existingItem) {
-        return currentCart.map((item) =>
-          item.productId === product.productId
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...currentCart, { ...product, quantity: 1 }];
-    });
-  };
 
   const removeFromCart = (productId) => {
     const item = cart.find((i) => i.productId === productId);
     if (!item) return;
-
     setCart((prev) => prev.filter((i) => i.productId !== productId));
     dispatch(removeCartItemAsync(item.cartId));
   };
@@ -79,24 +61,22 @@ function InteractiveCheckout({ products = [] }) {
   );
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto px-6">
       {cart.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-          <ShoppingCart className="w-12 h-12 text-zinc-400" />
-          <h2 className="text-xl font-semibold text-zinc-600 mt-4">
+          <ShoppingCart className="w-14 h-14 text-zinc-400" />
+          <h2 className="text-2xl font-semibold text-zinc-600 mt-4">
             Your cart is empty
           </h2>
           <p className="text-sm text-zinc-500 mt-2 mb-4">
             Add some items to get started!
           </p>
-          <Button onClick={() => navigate("/shop")}>
-            Continue Shopping
-          </Button>
+          <Button onClick={() => navigate("/shop")}>Continue Shopping</Button>
         </div>
       ) : (
-        <div className="flex gap-6">
-          {/* Product Listing */}
-          <div className="flex-1 space-y-3">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* 🛍 Product Listing */}
+          <div className="flex-1 space-y-4">
             {cart.map((product) => (
               <motion.div
                 key={product.productId}
@@ -104,23 +84,12 @@ function InteractiveCheckout({ products = [] }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
                 className={cn(
-                  "group p-4 rounded-xl",
-                  "bg-white dark:bg-zinc-900",
-                  "border border-zinc-200 dark:border-zinc-800",
-                  "hover:border-zinc-300 dark:hover:border-zinc-700",
-                  "transition-all duration-200"
+                  "group p-5 rounded-2xl bg-white border border-zinc-200 shadow-sm hover:shadow-md transition-all duration-200"
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "relative w-12 h-12 rounded-lg overflow-hidden",
-                        "bg-zinc-100 dark:bg-zinc-800",
-                        "transition-colors duration-200",
-                        "group-hover:bg-zinc-200 dark:group-hover:bg-zinc-700"
-                      )}
-                    >
+                <div className="flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-20 h-20 rounded-lg overflow-hidden bg-zinc-100">
                       <img
                         src={product.image}
                         alt={product.name}
@@ -128,142 +97,101 @@ function InteractiveCheckout({ products = [] }) {
                       />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                          {product.name}
-                        </h3>
-                        <span className="px-2 py-0.5 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">
-                          {product.category}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+                      <h3 className="text-lg font-semibold text-zinc-900">
+                        {product.name}
+                      </h3>
+                      <div className="flex items-center gap-2 text-sm text-zinc-500">
                         <span>₹{product.price}</span>
                         <span>•</span>
                         <span>{product.color}</span>
+                        {product.size && <span>• Size: {product.size}</span>}
                       </div>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => addToCart(product)}
-                    className="gap-1.5"
+
+                  {/* Quantity Control */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => updateQuantity(product.productId, -1)}
+                      className="rounded-full h-8 w-8"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <span className="text-lg font-medium w-6 text-center">
+                      {product.quantity}
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={() => updateQuantity(product.productId, 1)}
+                      className="rounded-full h-8 w-8"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Remove Button */}
+                  <button
+                    onClick={() => removeFromCart(product.productId)}
+                    className="p-2 rounded-md hover:bg-red-100 text-red-500"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    Add
-                  </Button>
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
               </motion.div>
             ))}
           </div>
 
-          {/* Cart Summary */}
+          {/* 💳 Cart Summary */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className={cn(
-              "w-80 flex flex-col",
-              "p-4 rounded-xl",
-              "bg-white dark:bg-zinc-900",
-              "border border-zinc-200 dark:border-zinc-800",
-              "sticky top-4",
-              "max-h-[32rem]"
-            )}
+            className="w-full lg:w-[28rem] flex flex-col p-6 rounded-2xl bg-white border border-zinc-200 shadow-sm"
           >
-            <div className="flex items-center gap-2 mb-3">
-              <ShoppingCart className="w-4 h-4 text-zinc-500" />
-              <h2 className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                Cart ({totalItems})
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingCart className="w-5 h-5 text-sky-600" />
+              <h2 className="text-lg font-semibold text-zinc-900">
+                Cart Summary ({totalItems})
               </h2>
             </div>
 
-            <motion.div className="flex-1 overflow-y-auto min-h-0 -mx-4 px-4 space-y-3">
-              <AnimatePresence initial={false} mode="popLayout">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <AnimatePresence initial={false}>
                 {cart.map((item) => (
                   <motion.div
                     key={item.productId}
                     layout
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{
-                      opacity: { duration: 0.2 },
-                      layout: { duration: 0.2 },
-                    }}
-                    className="flex items-center gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 mb-3"
+                    className="flex justify-between items-center py-3 border-b border-zinc-100"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">
-                          {item.name}
-                        </span>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => removeFromCart(item.productId)}
-                          className="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                        >
-                          <X className="w-3 h-3 text-zinc-400" />
-                        </motion.button>
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <div className="flex items-center gap-1">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => updateQuantity(item.productId, -1)}
-                            className="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </motion.button>
-                          <motion.span
-                            layout
-                            className="text-xs text-zinc-600 dark:text-zinc-400 w-4 text-center"
-                          >
-                            {item.quantity}
-                          </motion.span>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => updateQuantity(item.productId, 1)}
-                            className="p-1 rounded-md hover:bg-zinc-200 dark:hover:bg-zinc-700"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </motion.button>
-                        </div>
-                        <motion.span
-                          layout
-                          className="text-xs text-zinc-500 dark:text-zinc-400"
-                        >
-                          ₹{(item.price * item.quantity).toFixed(2)}
-                        </motion.span>
-                      </div>
-                    </div>
+                    <span className="text-sm text-zinc-700">
+                      {item.name} × {item.quantity}
+                    </span>
+                    <span className="text-sm font-medium text-zinc-900">
+                      ₹{(item.price * item.quantity).toFixed(2)}
+                    </span>
                   </motion.div>
                 ))}
               </AnimatePresence>
-            </motion.div>
+            </div>
 
-            <motion.div
-              layout
-              className="pt-3 mt-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  Total
-                </span>
-                <motion.span
-                  layout
-                  className="text-sm font-semibold text-zinc-900 dark:text-zinc-100"
-                >
+            <div className="pt-4 mt-4 border-t border-zinc-200">
+              <div className="flex justify-between mb-3 text-base font-medium">
+                <span>Total</span>
+                <span>
                   <NumberFlow value={totalPrice} />
-                </motion.span>
+                </span>
               </div>
-              <Button size="sm" className="w-full gap-2"onClick={()=> navigate("/checkout")}>
-                <CreditCard className="w-4 h-4" />
-                Checkout
+              <Button
+                size="lg"
+                className="w-full gap-2 text-base"
+                onClick={() => navigate("/checkout")}
+              >
+                <CreditCard className="w-5 h-5" />
+                Proceed to Checkout
               </Button>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
       )}
