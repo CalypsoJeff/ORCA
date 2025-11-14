@@ -68,13 +68,10 @@ const updateAdminStatus = async (req, res) => {
   if (!["approved", "rejected"].includes(action)) {
     return res.status(400).json({ error: "Invalid action" });
   }
-
   const admin = await Admin.findById(adminId);
   if (!admin) return res.status(404).json({ error: "Admin not found" });
-
   admin.status = action;
   await admin.save();
-
   return res.status(200).json({ message: `Admin ${action}` });
 };
 
@@ -158,27 +155,16 @@ const verifyOtp = async (req, res) => {
 const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
-
-    // Check if the email is provided
     if (!email) {
       return res.status(400).json({ error: "Email is required to resend OTP" });
     }
-
-    // Check if the admin is already registered
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
       return res.status(400).json({ error: "Admin already exists. Cannot resend OTP." });
     }
-
-    // Generate a new OTP
     const otp = generateOTP();
-
-    // Store the new OTP in Redis with a 5-minute expiry
     await redis.setex(email, 300, otp);
-
-    // Send the new OTP via email
     await sendEmailWithOTP(email, otp);
-
     return res.status(200).json({ message: "OTP has been resent to your email." });
   } catch (error) {
     console.error("Error resending OTP:", error);
@@ -187,15 +173,12 @@ const resendOTP = async (req, res) => {
 };
 const getUsers = async (req, res) => {
   try {
-    // Fetch all users from the database
     const users = await Users.find({}).select('name email phone status');
-
     if (!users || users.length === 0) {
       return res.status(404).json({
         message: 'No users found.',
       });
     }
-
     return res.status(200).json({
       message: 'Users fetched successfully.',
       users,
@@ -211,29 +194,19 @@ const getUsers = async (req, res) => {
 const blockUser = async (req, res) => {
   try {
     const { phone } = req.body;
-
-    // Find the user by email
     const user = await Users.findOne({ phone });
-
     if (!user) {
       return res.status(404).json({
         message: 'User not found.',
       });
     }
-
-    // Check if the user is already banned
     if (user.status === 'Banned') {
       return res.status(400).json({
         message: 'User is already banned.',
       });
     }
-
-    // Update the user's status to 'Banned'
     user.status = 'Banned';
-
-    // Save the updated user status
     await user.save();
-
     return res.status(200).json({
       message: 'User blocked (banned) successfully.',
       user,
@@ -253,27 +226,19 @@ const blockUser = async (req, res) => {
 const unblockUser = async (req, res) => {
   try {
     const { phone } = req.body;
-
-    // Find the user by email
     const user = await Users.findOne({ phone });
-
     if (!user) {
       return res.status(404).json({
         message: 'User not found.',
       });
     }
-    // Check if the user is already active
     if (user.status === 'Active') {
       return res.status(400).json({
         message: 'User is already active.',
       });
     }
-    // Update the user's status to 'Active'
     user.status = 'Active';
-
-    // Save the updated user status
     await user.save();
-
     return res.status(200).json({
       message: 'User unblocked (activated) successfully.',
       user,
@@ -295,7 +260,6 @@ const getPendingAdminRequests = async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch pending admin requests." });
   }
 }
-// Approve Admin
 export const approveAdminRequest = async (req, res) => {
   try {
     const { id } = req.params;

@@ -13,6 +13,8 @@ import adminRoutes from './routes/adminRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import addressRoutes from './routes/addressRoutes.js';
 import gymOwnerRoutes from './routes/gymOwnerRoutes.js';
+import exerciseRoutes from './routes/exerciseRoutes.js';
+import challengeRoutes from './routes/challengeRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
@@ -51,6 +53,8 @@ app.use("/api", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", addressRoutes);
 app.use("/api/gym-owner", gymOwnerRoutes);
+app.use("/api/fitness/exercises", exerciseRoutes);
+app.use("/api/fitness/challenges", challengeRoutes);
 
 
 // React SPA fallback

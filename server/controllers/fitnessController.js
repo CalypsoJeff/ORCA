@@ -22,7 +22,7 @@ const addFitness = async (req, res) => {
         if (!categories || categories.length === 0) {
             return res.status(400).json({ message: 'At least one category must be selected.' });
         }
-        const category = await FitnessCategory.findById(categories[0]); // Assuming single category for simplicity
+        const category = await Fitness.findById(categories[0]); // Assuming single category for simplicity
         if (!category) {
             return res.status(400).json({ message: 'Invalid category selected.' });
         }
@@ -69,7 +69,7 @@ const addFitnessCategory = async (req, res) => {
         if (!name || name.trim() === '') {
             return res.status(400).json({ message: 'Category name is required.' });
         }
-        const existingCategory = await FitnessCategory.findOne({ name: name.trim() });
+        const existingCategory = await Fitness.findOne({ name: name.trim() });
         if (existingCategory) {
             return res.status(400).json({ message: 'Category with this name already exists.' });
         }

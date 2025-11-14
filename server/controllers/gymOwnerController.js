@@ -82,6 +82,41 @@ export const getPendingGymOwners = async (req, res) => {
     res.json(pending);
 };
 
+export const getProfile = async (req, res) => {
+  try {
+    const gymOwner = await GymOwner.findById(req.gymOwnerId).select("-password");
+
+    if (!gymOwner) {
+      return res.status(404).json({ message: "Gym owner not found" });
+    }
+
+    res.status(200).json(gymOwner);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+/* -----------------------------------------
+   UPDATE PROFILE (AUTH REQUIRED)
+------------------------------------------ */
+export const updateProfile = async (req, res) => {
+  try {
+    const updates = req.body;
+    const updatedOwner = await GymOwner.findByIdAndUpdate(
+      req.gymOwnerId,
+      updates,
+      { new: true }
+    ).select("-password");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      gymOwner: updatedOwner,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
 // Gym owner: add member
 export const addMember = async (req, res) => {
     try {
