@@ -39,7 +39,6 @@ const userSchema = new mongoose.Schema({
       message: 'Phone number must be a 10-digit number.',
     },
     required: function () {
-      // phone required only if not Google login
       return !this.provider || this.provider !== 'google';
     },
   },

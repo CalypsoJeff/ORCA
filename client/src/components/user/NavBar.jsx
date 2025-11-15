@@ -32,7 +32,7 @@ const NavBar = () => {
     if (!user?._id) return;
     const fetchCartCount = async () => {
       try {
-        const res = await authInstanceAxios.get("/api/cart");
+        const res = await authInstanceAxios.get("/api/user/cart");
         if (res.data?.items) {
           setCartCount(res.data.items.length);
         }

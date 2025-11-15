@@ -76,11 +76,11 @@ export default function OrderDetails() {
   // 🔹 Cancel order
   const handleCancel = async () => {
     try {
-      // Example: await api.patch(`/api/orders/${orderId}/cancel`);
-      toast.info("Order cancellation request sent!");
+      await api.patch(`/api/orders/${orderId}/cancel`);
+      toast.success("Order cancelled successfully!");
       navigate("/account/orders");
-    } catch (e) {
-      toast.error("Could not cancel the order.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Cancellation failed");
     }
   };
 

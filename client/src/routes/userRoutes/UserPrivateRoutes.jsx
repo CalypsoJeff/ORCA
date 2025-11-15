@@ -1,15 +1,13 @@
 import { Navigate, Outlet } from "react-router";
 import { useSelector } from "react-redux";
+
 const UserPrivateRoutes = () => {
-  // Access authentication state from Redux or Context
-  // const isAuthenticated = useSelector((state) => state.auth.user !== null);
+  const token = useSelector((state) => state.auth.token);
 
-  // // If the user is not authenticated, redirect to the login page
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" />;
-  // }
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
 
-  // Otherwise, render the protected routes
   return <Outlet />;
 };
 

@@ -5,11 +5,7 @@ import { createOrderFromCart, verifyPayment } from "../controllers/paymentContro
 
 const router = Router();
 
-// Checkout routes (JSON body ok)
 router.post("/payments/razorpay/create-order", createOrderFromCart);
 router.post("/payments/razorpay/verify", verifyPayment);
-
-// Webhook MUST use raw body and be mounted before express.json()
-// router.post("/payments/razorpay/webhook", raw({ type: "application/json" }), handleWebhook);
 
 export default router;
