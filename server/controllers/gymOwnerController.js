@@ -36,8 +36,8 @@ export const loginGymOwner = async (req, res) => {
         const user = await User.findOne({ email });
         if (!user) return res.status(404).json({ message: "User not found." });
 
-        if (user.role !== "GymOwner")
-            return res.status(403).json({ message: "Not a gym owner account." });
+        // if (user.role !== "GymOwner")
+        //     return res.status(403).json({ message: "Not a gym owner account." });
 
         // 2️⃣ Verify password
         const validPassword = await bcrypt.compare(password, user.password);
