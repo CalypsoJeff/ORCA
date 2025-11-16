@@ -9,8 +9,8 @@ export const registerGymOwner = async (req, res) => {
         const { name, email, password, gymName, gymAddress, licenseId,phone} = req.body;
         const existing = await User.findOne({ email });
         if (existing) return res.status(400).json({ message: "Email already registered" });
-
-        const user = await User.create({ name, email, password, role: "GymOwner",phone });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = await User.create({ name, email, password: hashedPassword, role: "GymOwner",phone });
         const gymOwner = await GymOwner.create({
             userId: user._id,
             gymName,
