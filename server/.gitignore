@@ -29,3 +29,4 @@ dist-ssr
 server/config/firebase-service-account.json
 # or
 **/firebase-service-account.json
+config/orca-1234-firebase-adminsdk-fbsvc-cf69f06048.json
