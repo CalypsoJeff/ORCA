@@ -18,7 +18,8 @@ import challengeRoutes from './routes/challengeRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
-dotenv.config(); 
+dotenv.config();
+console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const app = express();
 const PORT = process.env.PORT || 3030;
 

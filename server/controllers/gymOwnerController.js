@@ -1,16 +1,16 @@
 import GymOwner from "../models/gymOwnerModel.js";
-import User from "../models/userModel.js";  
+import User from "../models/userModel.js";
 import Membership from "../models/membershipModel.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 // Register a gym owner
 export const registerGymOwner = async (req, res) => {
     try {
-        const { name, email, password, gymName, gymAddress, licenseId,phone} = req.body;
+        const { name, email, password, gymName, gymAddress, licenseId, phone } = req.body;
         const existing = await User.findOne({ email });
         if (existing) return res.status(400).json({ message: "Email already registered" });
         const hashedPassword = await bcrypt.hash(password, 10);
-        const user = await User.create({ name, email, password: hashedPassword, role: "GymOwner",phone });
+        const user = await User.create({ name, email, password: hashedPassword, role: "GymOwner", phone });
         const gymOwner = await GymOwner.create({
             userId: user._id,
             gymName,
@@ -44,8 +44,8 @@ export const loginGymOwner = async (req, res) => {
         if (!validPassword)
             return res.status(401).json({ message: "Invalid credentials." });
         console.log("REQ BODY:", req.body);
-console.log("Password from req:", req.body.password);
-console.log("Stored hashed password:", user.password);
+        console.log("Password from req:", req.body.password);
+        console.log("Stored hashed password:", user.password);
 
         // 3️⃣ Check approval
         const gymOwner = await GymOwner.findOne({ userId: user._id });
@@ -59,7 +59,7 @@ console.log("Stored hashed password:", user.password);
 
         // 4️⃣ Create JWT
         const token = jwt.sign(
-            { _id: user._id, role: user.role },
+            { _id: user._id, role: user.role, gymOwnerId: gymOwner._id },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
@@ -86,38 +86,38 @@ export const getPendingGymOwners = async (req, res) => {
 };
 
 export const getProfile = async (req, res) => {
-  try {
-    const gymOwner = await GymOwner.findById(req.gymOwnerId).select("-password");
+    try {
+        const gymOwner = await GymOwner.findById(req.gymOwnerId).select("-password");
 
-    if (!gymOwner) {
-      return res.status(404).json({ message: "Gym owner not found" });
+        if (!gymOwner) {
+            return res.status(404).json({ message: "Gym owner not found" });
+        }
+
+        res.status(200).json(gymOwner);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
     }
-
-    res.status(200).json(gymOwner);
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
 };
 
 /* -----------------------------------------
    UPDATE PROFILE (AUTH REQUIRED)
 ------------------------------------------ */
 export const updateProfile = async (req, res) => {
-  try {
-    const updates = req.body;
-    const updatedOwner = await GymOwner.findByIdAndUpdate(
-      req.gymOwnerId,
-      updates,
-      { new: true }
-    ).select("-password");
+    try {
+        const updates = req.body;
+        const updatedOwner = await GymOwner.findByIdAndUpdate(
+            req.gymOwnerId,
+            updates,
+            { new: true }
+        ).select("-password");
 
-    res.status(200).json({
-      message: "Profile updated successfully",
-      gymOwner: updatedOwner,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error });
-  }
+        res.status(200).json({
+            message: "Profile updated successfully",
+            gymOwner: updatedOwner,
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
 };
 
 // Gym owner: add member
