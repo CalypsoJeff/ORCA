@@ -13,6 +13,7 @@ export const isGymOwner = async (req, res, next) => {
 
     let decoded;
     try {
+      console.log("middleware JWT SECRET =", process.env.JWT_SECRET);
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       return res.status(401).json({ error: "Invalid or expired token." });

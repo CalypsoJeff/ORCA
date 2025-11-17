@@ -56,7 +56,7 @@ export const loginGymOwner = async (req, res) => {
             return res
                 .status(403)
                 .json({ message: "Your account is pending admin approval." });
-
+        console.log("LOGIN JWT SECRET =", process.env.JWT_SECRET);
         // 4️⃣ Create JWT
         const token = jwt.sign(
             { _id: user._id, role: user.role, gymOwnerId: gymOwner._id },
