@@ -1,9 +1,3 @@
-// server/middleware/gymAuth.js
-import jwt from "jsonwebtoken";
-import User from "../models/userModel.js";
-import GymOwner from "../models/gymOwnerModel.js";
-
-// If you have a helper verifyToken, you can use that; using jwt.verify directly here
 export const isGymOwner = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.header("Authorization");
@@ -21,50 +15,37 @@ export const isGymOwner = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
-      console.error("Token verify error:", err);
       return res.status(401).json({ error: "Invalid or expired token." });
     }
 
-    // attach decoded payload so other handlers can use it
+    // decoded token stays here
     req.user = decoded;
 
-    // If token carries gymOwnerId, use it directly
+    // CASE 1 — token has gymOwnerId
     if (decoded.gymOwnerId) {
-      req.gymOwnerId = decoded.gymOwnerId;
-      // Optionally populate req.user from DB to check status/role
-      try {
-        const userFromDb = await User.findById(decoded._id).select("+password -__v");
-        if (!userFromDb) {
-          return res.status(404).json({ error: "User not found." });
-        }
-        // attach full user doc as req.user for convenience (keep decoded as minimum)
-        req.user = userFromDb;
-      } catch (dbErr) {
-        console.error("DB lookup error:", dbErr);
-        // do not fail here if you prefer — but safest to return error
-        return res.status(500).json({ error: "Server error while verifying user." });
+      
+      // load user from DB but DO NOT overwrite req.user
+      const userFromDb = await User.findById(decoded._id).select("+password -__v");
+      if (!userFromDb) {
+        return res.status(404).json({ error: "User not found." });
       }
 
-      // finally confirm gymOwner entry exists and is approved
-      const gymOwner = await GymOwner.findOne({ userId: req.user._id });
-      if (!gymOwner) {
-        return res.status(403).json({ error: "Access denied. Not a gym owner." });
-      }
-      if (!gymOwner.isApproved) {
-        return res.status(403).json({ error: "Your gym profile is pending admin approval." });
-      }
+      req.dbUser = userFromDb;
 
-      // attach gymOwner doc for handlers that need it
+      // get gym owner entry
+      const gymOwner = await GymOwner.findOne({ userId: userFromDb._id });
+      if (!gymOwner) return res.status(403).json({ error: "Access denied. Not a gym owner." });
+      if (!gymOwner.isApproved) return res.status(403).json({ error: "Your gym profile is pending admin approval." });
+
       req.gymOwner = gymOwner;
       req.gymOwnerId = gymOwner._id.toString();
 
       return next();
     }
 
-    // If token doesn't contain gymOwnerId, fallback to role check
-    // Some tokens might include role: "GymOwner"
-    if (decoded.role && decoded.role === "GymOwner") {
-      // load user and gymOwner records
+    // CASE 2 — token role fallback
+    if (decoded.role === "GymOwner") {
+
       const user = await User.findById(decoded._id).select("+password -__v");
       if (!user) return res.status(404).json({ error: "User not found." });
 
@@ -72,17 +53,17 @@ export const isGymOwner = async (req, res, next) => {
       if (!gymOwner) return res.status(403).json({ error: "Gym owner profile not found." });
       if (!gymOwner.isApproved) return res.status(403).json({ error: "Your gym profile is pending admin approval." });
 
-      req.user = user;
+      req.dbUser = user;
       req.gymOwner = gymOwner;
       req.gymOwnerId = gymOwner._id.toString();
 
       return next();
     }
 
-    // No gymOwnerId and no GymOwner role -> deny
     return res.status(403).json({ error: "Access denied. Not a gym owner." });
-  } catch (error) {
-    console.error("Gym auth error:", error);
+
+  } catch (err) {
+    console.error("Gym auth error:", err);
     return res.status(500).json({ error: "Server error in auth middleware." });
   }
 };
