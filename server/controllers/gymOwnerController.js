@@ -124,7 +124,7 @@ export const updateProfile = async (req, res) => {
 export const addMember = async (req, res) => {
     try {
         const { email, phone } = req.body;
-        const gymOwnerId = req.user.gymOwnerId;
+        const gymOwnerId = req.gymOwnerId;
 
         let user = await User.findOne({ $or: [{ email }, { phone }] });
         if (!user) user = await User.create({ email, phone, role: "User" });
@@ -142,7 +142,7 @@ export const addMember = async (req, res) => {
 
 // Gym owner: list members
 export const getMembers = async (req, res) => {
-    const gymOwnerId = req.user.gymOwnerId;
+    const gymOwnerId = req.gymOwnerId;
     const gymOwner = await GymOwner.findById(gymOwnerId)
         .populate({ path: "members", populate: { path: "userId" } });
     res.json(gymOwner.members);
