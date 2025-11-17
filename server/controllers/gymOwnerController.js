@@ -43,6 +43,9 @@ export const loginGymOwner = async (req, res) => {
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword)
             return res.status(401).json({ message: "Invalid credentials." });
+        console.log("REQ BODY:", req.body);
+console.log("Password from req:", req.body.password);
+console.log("Stored hashed password:", user.password);
 
         // 3️⃣ Check approval
         const gymOwner = await GymOwner.findOne({ userId: user._id });
