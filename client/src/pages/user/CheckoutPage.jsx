@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "flowbite-react";
-import { useNavigate, Link } from "react-router-dom"; // ✅ Added Link
+import { useNavigate, Link } from "react-router-dom"; 
 import NavBar from "../../components/user/NavBar";
 import { loadCart } from "../../api/endpoints/products/user-products";
 import authInstanceAxios from "../../api/middlewares/interceptor";

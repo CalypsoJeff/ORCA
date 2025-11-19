@@ -14,7 +14,6 @@ import Carts from "../../pages/user/Carts";
 import CompetitionDetail from "../../pages/user/CompetitionDetail";
 import PaymentConfirmation from "../../pages/user/PaymentConfirmation";
 import UserProfile from "../../pages/user/UserProfile";
-// import Rides from "../../pages/user/Rides";
 import { NotFoundPage } from "../../components/ui/404-page-not-found";
 import CheckoutPage from "../../pages/user/CheckoutPage";
 import RidersPage from "../../pages/user/RidersPage";
@@ -31,15 +30,19 @@ const UserRoutes = () => {
       <Route path="/about" element={<AboutPage />} />
       <Route path="/otp" element={<Otp />} />
       <Route path="/fitness" element={<Fitness />} />
-       <Route path="/order/success/:orderId" element={<OrderSuccess />} />
+      <Route path="/home" element={<LandingPage />} />
+      <Route path="/shop" element={<Products />} />
+      <Route path="/product/:id" element={<ProductDetails />} />
+      <Route path="/competitions" element={<Competitions />} />
+      <Route path="/competition/:id" element={<CompetitionDetail />} />
+      <Route path="*" element={<NotFoundPage />} />
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/account/profile" element={<UserProfile />} />
         <Route path="/account/addresses" element={<Addresses />} />
-        
-
+        <Route path="/order/success/:orderId" element={<OrderSuccess />} />
         {/* <Route path="/account/dashboard" element={<AccountDashboard />} /> */}
         <Route path="/account/orders" element={<UserOrders />} />
         <Route path="/account/orders/:orderId" element={<OrderDetails />} />
@@ -54,13 +57,9 @@ const UserRoutes = () => {
           path="/account/forgot-password"
           element={<ForgotPasswordPage />}
         /> */}
-        <Route path="/home" element={<LandingPage />} />
         <Route path="/fitness" element={<Fitness />} />
-        <Route path="/shop" element={<Products />} />
-        <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/competitions" element={<Competitions />} />
-        <Route path="/competition/:id" element={<CompetitionDetail />} />
+
         <Route
           path="/competition/:id/payment-confirmation"
           element={<PaymentConfirmation />}
@@ -68,7 +67,6 @@ const UserRoutes = () => {
         <Route path="/trekking" element={<Trekkings />} />
         <Route path="/cart" element={<Carts />} />
         <Route path="/rides" element={<RidersPage />} />
-        <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
   );

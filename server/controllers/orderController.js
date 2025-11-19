@@ -4,7 +4,6 @@ export const getAllOrders = async (req, res) => {
   try {
     const userId = req.user?._id;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
     const page = Math.max(1, Number(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 10));
     const { status, from, to } = req.query;
@@ -15,7 +14,6 @@ export const getAllOrders = async (req, res) => {
       if (from) query.createdAt.$gte = new Date(from);
       if (to) query.createdAt.$lte = new Date(to);
     }
-
     const [items, total] = await Promise.all([
       Order.find(query)
         .sort({ createdAt: -1 })
@@ -30,7 +28,6 @@ export const getAllOrders = async (req, res) => {
         .lean(),
       Order.countDocuments(query),
     ]);
-
     return res.json({ items, page, limit, total, hasMore: page * limit < total });
   } catch (e) {
     return res.status(500).json({ error: e.message });
@@ -40,7 +37,6 @@ export const getAllOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
-
     const order = await Order.findById(id)
       .populate({
         path: "products.product",
@@ -51,16 +47,12 @@ export const getOrderById = async (req, res) => {
         select: "name phone addressLine1 addressLine2 city state pincode isDefault",
       })
       .lean();
-
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
-
-    // ✅ Optional security check
     if (req.user && String(order.user) !== String(req.user._id)) {
       return res.status(403).json({ error: "Forbidden" });
     }
-
     return res.status(200).json(order);
   } catch (e) {
     console.error("Error fetching order:", e);
@@ -69,13 +61,11 @@ export const getOrderById = async (req, res) => {
 };
 
 export const getAllOrdersAdmin = async (req, res) => {
-  console.log("req reached here")
   try {
     const orders = await Order.find()
       .sort({ createdAt: -1 })
       .populate({ path: "user", select: "name email" })
       .lean();
-    console.log(orders, "jeff")
     return res.json(orders);
   } catch (e) {
     return res.status(500).json({ error: e.message });
@@ -100,40 +90,87 @@ export const cancelOrder = async (req, res) => {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
 
+    console.log("\n===========================================");
+    console.log("🔍 STARTING REFUND DEBUG");
+    console.log("Order ID:", orderId);
+
     if (!order) {
+      console.log("❌ Order not found");
       return res.status(404).json({ error: "Order not found" });
     }
 
+    console.log("Order Status:", order.status);
+
     if (!["Pending", "Confirmed"].includes(order.status)) {
+      console.log("❌ Cannot cancel order at this stage");
       return res.status(400).json({
         error: "This order cannot be cancelled now.",
       });
     }
 
-    // COD
-    if (order.paymentMethod === "cod" || order.payment.gateway === "cod") {
-      order.status = "Cancelled";
-      order.payment.status = "REFUNDED";
-      await order.save();
-      return res.json({ message: "Order cancelled successfully (COD)" });
-    }
-
-    // Validate Razorpay Payment ID
     if (!order.payment.razorpayPaymentId) {
+      console.log("❌ No Razorpay payment ID found");
       return res.status(400).json({
         error: "Payment ID missing. Cannot process refund.",
       });
     }
 
-    const refundAmountPaise = Math.round(order.grandTotal * 100);
+    console.log("Payment ID:", order.payment.razorpayPaymentId);
 
-    // Use rzp instance here
-    const refund = await rzp.payments.refund(order.payment.razorpayPaymentId, {
-      amount: refundAmountPaise,
-      speed: "normal",
+    // 1️⃣ Fetch Payment Details
+    const paymentDetails = await rzp.payments.fetch(order.payment.razorpayPaymentId);
+    console.log("\n📌 Payment Details Fetched:");
+    console.log(JSON.stringify(paymentDetails, null, 2));
+
+    // 2️⃣ Fetch Razorpay Order
+    const rzpOrder = await rzp.orders.fetch(paymentDetails.order_id);
+    console.log("\n📌 Razorpay Order Details:");
+    console.log(JSON.stringify(rzpOrder, null, 2));
+
+    // 3️⃣ Amount checks
+    const refundAmountPaise = Number(paymentDetails.amount);
+
+    console.log("\n💰 Amount Checks:");
+    console.log("order.grandTotal:", order.grandTotal);
+    console.log("paymentDetails.amount:", paymentDetails.amount);
+    console.log("refundAmountPaise:", refundAmountPaise);
+    console.log("Type of refundAmountPaise:", typeof refundAmountPaise);
+
+    console.log("\n📨 REFUND REQUEST PAYLOAD:");
+    console.log({
+      paymentId: order.payment.razorpayPaymentId,
+      amount: refundAmountPaise
     });
 
-    // Save refund details
+    // 4️⃣ Initiate Refund
+    console.log("\n🚀 INITIATING REFUND...");
+    let refund;
+    try {
+      refund = await rzp.payments.refund(
+        order.payment.razorpayPaymentId,
+        { amount: refundAmountPaise }
+      );
+    } catch (refundErr) {
+      console.log("\n❌ REFUND API ERROR (RAW):");
+      console.log(refundErr);
+
+      console.log("\n❌ REFUND API ERROR (SAFE LOG):");
+      console.log({
+        statusCode: refundErr?.statusCode,
+        error: refundErr?.error,
+        message: refundErr?.message
+      });
+
+      return res.status(500).json({
+        error: "Refund API failed",
+        details: refundErr?.error || refundErr?.message
+      });
+    }
+
+    console.log("\n🟢 REFUND SUCCESS:");
+    console.log(JSON.stringify(refund, null, 2));
+
+    // 5️⃣ Save refund
     order.payment.refunds.push({
       amount: refund.amount / 100,
       reason: "Order Cancelled",
@@ -142,8 +179,11 @@ export const cancelOrder = async (req, res) => {
 
     order.payment.status = "REFUNDED";
     order.status = "Cancelled";
-
     await order.save();
+
+    console.log("✅ ORDER UPDATED SUCCESSFULLY");
+
+    console.log("===========================================\n");
 
     return res.json({
       message: "Order cancelled and refund initiated.",
@@ -151,9 +191,13 @@ export const cancelOrder = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Refund Error:", err);
+    console.log("\n🔥 UNEXPECTED SERVER ERROR:");
+    console.log(err);
+    console.log("===========================================\n");
+
     return res.status(500).json({
-      error: "Could not cancel the order. Please try again.",
+      error: "Could not cancel order. Try again.",
+      details: err.message
     });
   }
 };
