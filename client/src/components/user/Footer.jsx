@@ -1,26 +1,32 @@
+import { Link } from "react-router-dom";
+
 const Footer = () => {
   return (
     <footer className="bg-gray-50 border-t border-gray-200 ">
       <div className="container mx-auto px-6 py-12 md:py-20 no-underline">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+          {/* Brand */}
           <div className="md:col-span-1 ">
-            <a
-              href="/"
+            <Link
+              to="/"
               className="text-2xl font-display font-bold text-orca-800 tracking-tight inline-block mb-4"
             >
               ORCA
-            </a>
+            </Link>
             <p className="text-gray-600 mb-6 max-w-xs">
               Simplicity is the ultimate sophistication in digital experiences.
             </p>
+
+            {/* Social Icons */}
             <div className="flex space-x-4">
               {["twitter", "facebook", "instagram", "github"].map((social) => (
                 <a
                   key={social}
-                  href={`#${social}`}
+                  href="#"
                   className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:text-orca-600 hover:bg-orca-50 transition-colors"
                   aria-label={`${social} link`}
                 >
+                  {/* (Same SVG icons as before) */}
                   <svg
                     width="20"
                     height="20"
@@ -37,6 +43,7 @@ const Footer = () => {
                         strokeLinejoin="round"
                       />
                     )}
+
                     {social === "facebook" && (
                       <path
                         d="M18 2H15C12.791 2 11 3.791 11 6V9H7V13H11V22H15V13H19L20 9H15V6C15 5.448 15.448 5 16 5H18V2Z"
@@ -46,6 +53,7 @@ const Footer = () => {
                         strokeLinejoin="round"
                       />
                     )}
+
                     {social === "instagram" && (
                       <>
                         <rect
@@ -56,8 +64,6 @@ const Footer = () => {
                           rx="5"
                           stroke="currentColor"
                           strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
                         />
                         <circle
                           cx="12"
@@ -65,25 +71,21 @@ const Footer = () => {
                           r="4"
                           stroke="currentColor"
                           strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
                         />
                         <path
                           d="M18 6L18.0002 6"
                           stroke="currentColor"
                           strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
                         />
                       </>
                     )}
+
                     {social === "github" && (
                       <path
                         d="M9 19C4.5 20.5 4.5 16.5 2 16M16 22V18.13C16.0375 17.6532 15.9731 17.1738 15.811 16.7238C15.6489 16.2738 15.3929 15.8634 15.06 15.52C18.2 15.17 21.5 13.98 21.5 8.52C21.4997 7.12383 20.9627 5.7812 20 4.77C20.4559 3.54851 20.4236 2.19835 19.91 1C19.91 1 18.73 0.650001 16 2.48C13.708 1.85882 11.292 1.85882 9 2.48C6.27 0.650001 5.09 1 5.09 1C4.57638 2.19835 4.54414 3.54851 5 4.77C4.03013 5.7887 3.49252 7.14346 3.5 8.55C3.5 13.97 6.8 15.16 9.94 15.55C9.611 15.89 9.35726 16.2954 9.19531 16.7399C9.03335 17.1844 8.96681 17.6581 9 18.13V22"
                         stroke="currentColor"
                         strokeWidth="1.5"
                         strokeLinecap="round"
-                        strokeLinejoin="round"
                       />
                     )}
                   </svg>
@@ -92,100 +94,139 @@ const Footer = () => {
             </div>
           </div>
 
+          {/* Footer Navigation */}
           <div className="md:col-span-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-                  Product
-                </h3>
-                <ul className="space-y-3">
-                  {[
-                    "Features",
-                    "Integrations",
-                    "Pricing",
-                    "Updates",
-                    "Security",
-                  ].map((item) => (
-                    <li key={item}>
-                      <a
-                        href={`#${item.toLowerCase()}`}
-                        className="text-gray-600 hover:text-orca-600 transition-colors hover-link"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
                   Company
                 </h3>
                 <ul className="space-y-3">
-                  {["About", "Blog", "Careers", "Press", "Partners"].map(
-                    (item) => (
-                      <li key={item}>
-                        <a
-                          href={`#${item.toLowerCase()}`}
-                          className="text-gray-600 hover:text-orca-600 transition-colors hover-link"
-                        >
-                          {item}
-                        </a>
-                      </li>
-                    )
-                  )}
+                  <li>
+                    <Link
+                      to="/about"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      About
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/contact"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Contact
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/blog"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Blog
+                    </Link>
+                  </li>
                 </ul>
               </div>
+
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
+                  Policies
+                </h3>
+                <ul className="space-y-3">
+                  <li>
+                    <Link
+                      to="/privacy-policy"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/terms-and-conditions"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Terms & Conditions
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/refund-policy"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Refund Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/shipping-policy"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Shipping Policy
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
                   Support
                 </h3>
                 <ul className="space-y-3">
-                  {[
-                    "Documentation",
-                    "Contact",
-                    "Knowledge Base",
-                    "FAQ",
-                    "Community",
-                  ].map((item) => (
-                    <li key={item}>
-                      <a
-                        href={`#${item.toLowerCase()}`}
-                        className="text-gray-600 hover:text-orca-600 transition-colors hover-link"
-                      >
-                        {item}
-                      </a>
-                    </li>
-                  ))}
+                  <li>
+                    <Link
+                      to="/faq"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      FAQ
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      to="/support"
+                      className="text-gray-600 hover:text-orca-600"
+                    >
+                      Customer Support
+                    </Link>
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Bottom Footer */}
         <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm">
             &copy; {new Date().getFullYear()} ORCA. All rights reserved.
           </p>
+
           <div className="mt-4 md:mt-0 flex space-x-6">
-            <a
-              href="#privacy"
-              className="text-sm text-gray-500 hover:text-orca-600 transition-colors hover-link"
+            <Link
+              to="/privacy-policy"
+              className="text-sm text-gray-500 hover:text-orca-600"
             >
               Privacy Policy
-            </a>
-            <a
-              href="#terms"
-              className="text-sm text-gray-500 hover:text-orca-600 transition-colors hover-link"
+            </Link>
+            <Link
+              to="/terms-and-conditions"
+              className="text-sm text-gray-500 hover:text-orca-600"
             >
-              Terms of Service
-            </a>
-            <a
-              href="#cookies"
-              className="text-sm text-gray-500 hover:text-orca-600 transition-colors hover-link"
+              Terms & Conditions
+            </Link>
+            <Link
+              to="/refund-policy"
+              className="text-sm text-gray-500 hover:text-orca-600"
             >
-              Cookie Policy
-            </a>
+              Refund Policy
+            </Link>
+            <Link
+              to="/shipping-policy"
+              className="text-sm text-gray-500 hover:text-orca-600"
+            >
+              Shipping Policy
+            </Link>
           </div>
         </div>
       </div>
