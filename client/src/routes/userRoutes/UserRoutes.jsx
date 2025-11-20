@@ -21,6 +21,11 @@ import OrderDetails from "../../pages/user/OrderDetails";
 import UserOrders from "../../pages/user/UserOrders";
 import OrderSuccess from "../../pages/user/OrderSuccess";
 import Addresses from "../../pages/user/Addresses";
+import PrivacyPolicy from "../../pages/user/PrivacyPolicy";
+import TermsAndConditions from "../../pages/user/TermsAndConditions";
+import RefundPolicy from "../../pages/user/RefundPolicy";
+import ShippingPolicy from "../../pages/user/ShippingPolicy";
+import Contact from "../../pages/user/Contact";
 
 const UserRoutes = () => {
   return (
@@ -36,6 +41,11 @@ const UserRoutes = () => {
       <Route path="/competitions" element={<Competitions />} />
       <Route path="/competition/:id" element={<CompetitionDetail />} />
       <Route path="*" element={<NotFoundPage />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+      <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/shipping-policy" element={<ShippingPolicy />} />
+      <Route path="/contact" element={<Contact />} />
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>
