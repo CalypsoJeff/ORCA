@@ -9,6 +9,9 @@ import Cart from '../models/cartModel.js';
 import { generateResetToken, generateToken, validateResetToken } from '../helper/jwtHelper.js';
 import Product from '../models/productModel.js';
 import admin from "../config/firebaseAdmin.js";
+import Exercise from "../models/exerciseModel.js";
+import Challenge from "../models/challengeModel.js";
+
 
 const loginUser = async (req, res) => {
   try {
@@ -670,6 +673,34 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
+
+ const getMemberExercises = async (req, res) => {
+  try {
+    const exercises = await Exercise.find({
+      gymOwnerId: req.gymOwnerId,
+      isActive: true
+    });
+
+    res.json(exercises);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+ const getMemberChallenges = async (req, res) => {
+  try {
+    const challenges = await Challenge.find({
+      gymOwnerId: req.gymOwnerId
+    }).populate("exercises");
+
+    res.json(challenges);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
 export default {
   loginUser,
   registerUser,
@@ -689,5 +720,7 @@ export default {
   updateUserProfile,
   addToCart,
   loadCart,
-  updateCart
+  updateCart,
+  getMemberExercises,
+  getMemberChallenges
 };

@@ -15,6 +15,8 @@ import addressRoutes from './routes/addressRoutes.js';
 import gymOwnerRoutes from './routes/gymOwnerRoutes.js';
 import exerciseRoutes from './routes/exerciseRoutes.js';
 import challengeRoutes from './routes/challengeRoutes.js';
+import memberExerciseRoutes from './routes/memberExerciseRoutes.js';
+import memberChallengeRoutes from './routes/memberChallengeRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
@@ -53,6 +55,8 @@ app.use("/api", orderRoutes);
 app.use("/api", paymentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/user", addressRoutes);
+app.use("/api/user/exercises", memberExerciseRoutes);
+app.use("/api/user/challenges", memberChallengeRoutes);
 app.use("/api/gym-owner", gymOwnerRoutes);
 app.use("/api/fitness/exercises", exerciseRoutes);
 app.use("/api/fitness/challenges", challengeRoutes);
