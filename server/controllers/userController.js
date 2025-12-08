@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-import redis from "../helper/redisClient.js";
 import { generateOTP, sendOTP } from "../helper/twiloOtp.js";
 import User from '../models/userModel.js';
 import Competition from '../models/competitionsModel.js';
@@ -11,6 +10,8 @@ import Product from '../models/productModel.js';
 import admin from "../config/firebaseAdmin.js";
 import Exercise from "../models/exerciseModel.js";
 import Challenge from "../models/challengeModel.js";
+import TempUser from "../models/tempUser.js";
+import TempCompetitionRegistration from "../models/tempCompetitionRegistration.js";
 
 
 const loginUser = async (req, res) => {
@@ -74,47 +75,37 @@ const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
 
-    // Validate input
-    if (!name || !email || !password || !phone) {
-      return res.status(400).json({ error: "All required fields must be filled." });
-    }
-    // Check if the email or phone number is already registered
+    if (!name || !email || !password || !phone)
+      return res.status(400).json({ error: "All fields required" });
+
     const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
-    if (existingUser) {
-      return res.status(400).json({ error: "Email or Mobile Number already registered." });
-    }
-    if (existingUser) {
-      if (existingUser.status === 'Banned') {
-        return res.status(400).json({
-          message: 'This email or phone number is banned and cannot be used to register.',
-        });
-      }
-    }
+    if (existingUser)
+      return res.status(400).json({ error: "Email or Phone already registered." });
+
     const otp = generateOTP();
-    // Correctly set OTP with expiration time (300 seconds = 5 minutes)
-    const otpResult = await redis.set(`otp:${phone}`, otp, 'EX', 300);
-    console.log("OTP set successfully in Redis:", otpResult);
-    // Send OTP via SMS (you may want to check here that the SMS was successfully sent)
-    await sendOTP(phone, otp);
-    // Temporarily store user data in Redis for verification later
-    const userDataResult = await redis.set(
-      `tempUser:${phone}`,
-      JSON.stringify({ name, email, password, phone }),
-      "EX",
-      600 // 10-minute expiration time for user data
+
+    await TempUser.findOneAndUpdate(
+      { phone },
+      {
+        name,
+        email,
+        phone,
+        password,
+        otp,
+        otpExpiresAt: Date.now() + 5 * 60 * 1000
+      },
+      { upsert: true }
     );
-    console.log("User data set successfully in Redis:", userDataResult);
-    // Send response to client
-    return res.status(200).json({
-      message: "OTP sent successfully. Please verify to complete registration.",
-    }); // Return immediately after sending the response
+
+    await sendOTP(phone, otp);
+
+    return res.status(200).json({ message: "OTP sent successfully." });
 
   } catch (error) {
-    console.error("Error during user registration:", error);
-    return res.status(500).json({ error: "An error occurred during registration. Please try again later." }); // Ensure response is sent only once
+    console.error("Error registering user:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
-
 export const googleAuth = async (req, res) => {
   try {
     const { idToken } = req.body;
@@ -161,86 +152,67 @@ export const googleAuth = async (req, res) => {
 const verifyOtpAndRegister = async (req, res) => {
   try {
     const { phone, otp } = req.body;
-    // Validate input
-    if (!phone || !otp) {
-      return res.status(400).json({ error: "Phone number and OTP are required." });
-    }
-    // Retrieve the OTP from Redis
-    const storedOtp = await redis.get(`otp:${phone}`);
-    console.log("Stored OTP from Redis:", storedOtp);
-    if (!storedOtp) {
-      console.log(`No OTP found for phone number: ${phone}`);
-      return res.status(400).json({ error: "OTP expired or not found. Please request a new OTP." });
-    }
-    // Verify the OTP
-    if (storedOtp !== otp) {
-      return res.status(400).json({ error: "Invalid OTP. Please try again." });
-    }
-    // Retrieve user details from Redis
-    const userData = await redis.get(`tempUser:${phone}`);
-    console.log("Retrieved userData from Redis:", userData); // Debug log
-    if (!userData) {
-      return res.status(400).json({ error: "User data expired. Please register again." });
-    }
-    // Parse the userData
-    let parsedData;
-    try {
-      parsedData = JSON.parse(userData);
-    } catch (err) {
-      console.error("Failed to parse userData:", err);
-      return res.status(500).json({ error: "Invalid user data stored. Please register again." });
-    }
-    const { name, email, password } = parsedData;
-    console.log("Parsed Data:", name, email, password);
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    // Create and save the user
-    const newUser = new User({
-      name,
-      email,
+
+    const temp = await TempUser.findOne({ phone });
+
+    if (!temp)
+      return res.status(400).json({ error: "OTP expired. Please register again." });
+
+    if (temp.otp !== otp)
+      return res.status(400).json({ error: "Invalid OTP" });
+
+    if (temp.otpExpiresAt < Date.now())
+      return res.status(400).json({ error: "OTP expired. Try again" });
+
+    const hashedPassword = await bcrypt.hash(temp.password, 10);
+
+    const newUser = await User.create({
+      name: temp.name,
+      email: temp.email,
       password: hashedPassword,
-      phone,
+      phone: temp.phone,
     });
-    await newUser.save();
-    // Generate JWT tokens
-    const { token, refreshToken } = generateToken(name, email, "user");
-    // Clean up Redis
-    await redis.del(`otp:${phone}`);
-    await redis.del(`tempUser:${phone}`);
-    res.status(201).json({
-      message: "Registration successful! Redirecting to home page.",
+
+    await TempUser.deleteOne({ phone });
+
+    const { token, refreshToken } = generateToken(newUser._id, newUser.phone, "user");
+
+    return res.status(201).json({
+      message: "Registration successful",
       token,
       refreshToken,
       newUser,
     });
+
   } catch (error) {
-    console.error("Error verifying OTP:", error);
-    res.status(500).json({ error: "Failed to verify OTP. Please try again later." });
+    console.error("OTP verification failed:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 // Resend OTP
 const resendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
-    // Validate phone number
-    if (!phone) {
-      return res.status(400).json({ error: "Phone number is required." });
-    }
-    // Check if user data exists in Redis
-    const userData = await redis.get(`tempUser:${phone}`);
-    if (!userData) {
-      return res.status(400).json({ error: "User data expired. Please register again." });
-    }
-    // Generate a new OTP
+
+    const temp = await TempUser.findOne({ phone });
+
+    if (!temp)
+      return res.status(400).json({ error: "Data expired. Register again." });
+
     const otp = generateOTP();
-    // Update OTP in Redis
-    await redis.set(`otp:${phone}`, otp, "EX", 600);
-    // Send OTP via SMS
+
+    temp.otp = otp;
+    temp.otpExpiresAt = Date.now() + 5 * 60 * 1000;
+    await temp.save();
+
     await sendOTP(phone, otp);
-    res.status(200).json({ message: "OTP resent successfully." });
+
+    return res.status(200).json({ message: "OTP resent successfully." });
+
   } catch (error) {
     console.error("Error resending OTP:", error);
-    res.status(500).json({ error: "Failed to resend OTP. Please try again later." });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -315,39 +287,22 @@ const loadCompetitionDetailsPage = async (req, res) => {
 const registerForCompetition = async (req, res) => {
   try {
     const { competitionId, name, email, phone, userId } = req.body;
-    if (!competitionId || !name || !email || !phone) {
-      return res.status(400).json({ error: 'All fields are required.' });
-    }
-    // Find the competition
-    const competition = await Competition.findById(competitionId);
-    if (!competition || competition.status !== 'active') {
-      return res.status(404).json({ error: 'Competition not found or inactive.' });
-    }
-    // Check if the user is already registered for this competition in the Competition model
-    const isRegistered = competition.registeredParticipants.some(
-      (participant) => participant.userId.toString() === userId
-    );
-    if (isRegistered) {
-      return res.status(400).json({ error: 'You are already registered for this competition.' });
-    }
-    const registrationDetails = {
-      competitionId,
-      name,
-      email,
-      phone,
-      userId: userId
-    };
-    // Store registration details in Redis with a timeout
-    const redisKey = `registration:${userId}:${competitionId}`;
-    await redis.setex(redisKey, 10 * 60, JSON.stringify(registrationDetails)); // Expire after 10 minutes
-    return res.status(200).json({
-      message: 'Registration details passed to payment confirmation.',
-      competition,
 
-    });
+    const competition = await Competition.findById(competitionId);
+    if (!competition || competition.status !== "active")
+      return res.status(404).json({ error: "Competition not found or inactive" });
+
+    await TempCompetitionRegistration.findOneAndUpdate(
+      { userId, competitionId },
+      { userId, competitionId, name, email, phone },
+      { upsert: true }
+    );
+
+    return res.status(200).json({ message: "Proceed to payment", competition });
+
   } catch (error) {
-    console.error('Error during competition registration:', error);
-    res.status(500).json({ error: 'An error occurred during registration.' });
+    console.error("Competition registration failed:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -356,76 +311,76 @@ const showPaymentConfirmation = async (req, res) => {
     const { competitionId } = req.params;
     const { userId } = req.body;
 
-    const redisKey = `registration:${userId}:${competitionId}`;
-    const storedDetails = await redis.get(redisKey);
-    console.log(storedDetails, "storedDetails");
+    const reg = await TempCompetitionRegistration.findOne({ userId, competitionId });
 
-    if (!storedDetails) {
-      return res.status(400).json({ error: 'Registration details not found or expired.' });
-    }
-
-    const registrationDetails = JSON.parse(storedDetails);
+    if (!reg)
+      return res.status(400).json({ error: "Registration expired" });
 
     const competition = await Competition.findById(competitionId);
-    if (!competition) {
-      return res.status(404).json({ error: 'Competition not found.' });
-    }
 
     return res.status(200).json({
-      message: 'Payment confirmation details.',
+      message: "Payment details",
       competition,
       cost: competition.cost,
-      registrationDetails,
-      userId
+      registrationDetails: reg
     });
+
   } catch (error) {
-    console.error('Error showing payment confirmation:', error);
-    res.status(500).json({ error: 'An error occurred while showing payment confirmation.' });
+    res.status(500).json({ error: "Server error" });
   }
 };
 
+
 const createRazorpayCompetition = async (req, res) => {
   try {
-    const { competitionId } = req.body;
-    const { userId } = req.body; // Assuming userId is sent in the request body
+    const { competitionId, userId } = req.body;
 
-    const redisKey = `registration:${userId}:${competitionId}`;
-    const storedDetails = await redis.get(redisKey);
+    const registrationDetails = await TempCompetitionRegistration.findOne({
+      competitionId,
+      userId,
+    });
 
-    if (!storedDetails) {
-      return res.status(400).json({ error: 'Registration details not found or expired.' });
+    if (!registrationDetails) {
+      return res.status(400).json({
+        error: "Registration details not found or expired.",
+      });
     }
 
-    const registrationDetails = JSON.parse(storedDetails);
-
-    // Verify Competition ID
+    // Verify competition exists
     const competition = await Competition.findById(competitionId);
     if (!competition) {
-      return res.status(404).json({ error: 'Competition not found.' });
+      return res.status(404).json({ error: "Competition not found." });
     }
 
     const amount = competition.cost;
 
     const options = {
       amount: amount * 100,
-      currency: 'INR',
-      receipt: `order_rcptid_${new Date().getTime()}`
+      currency: "INR",
+      receipt: `order_rcptid_${Date.now()}`,
     };
 
     razorpayInstance.orders.create(options, async (err, order) => {
       if (err) {
-        console.error('Error creating Razorpay order:', err);
-        return res.status(500).json({ error: 'Failed to create Razorpay order.' });
+        console.error("Error creating Razorpay order:", err);
+        return res.status(500).json({ error: "Failed to create Razorpay order." });
       }
 
-      if (order.status === 'paid') {
+      // If order payment already marked as paid
+      if (order.status === "paid") {
         try {
+          // Update user registration
           await User.findByIdAndUpdate(
             registrationDetails.userId,
-            { $push: { registeredCompetitions: { competitionId: competitionId } } },
+            {
+              $push: {
+                registeredCompetitions: { competitionId },
+              },
+            },
             { new: true }
           );
 
+          // Add participant to competition
           await Competition.findByIdAndUpdate(
             competitionId,
             {
@@ -440,27 +395,30 @@ const createRazorpayCompetition = async (req, res) => {
             { new: true }
           );
 
-          // Delete registration details from Redis after successful registration
-          await redis.del(redisKey);
+          // Delete temporary registration from MongoDB
+          await TempCompetitionRegistration.deleteOne({
+            competitionId,
+            userId,
+          });
 
           return res.status(200).json({
-            message: 'Order created successfully.',
+            message: "Order created successfully.",
             order,
           });
         } catch (error) {
-          console.error('Error updating user or competition:', error);
-          return res.status(500).json({ error: 'Failed to update user or competition.' });
+          console.error("Error updating user or competition:", error);
+          return res.status(500).json({ error: "Failed to update user or competition." });
         }
-      } else {
-        return res.status(200).json({
-          message: 'Order created successfully.',
-          order,
-        });
       }
+
+      return res.status(200).json({
+        message: "Order created successfully.",
+        order,
+      });
     });
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error("Error creating Razorpay order:", error);
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
@@ -491,7 +449,6 @@ const loadShopProducts = async (req, res) => {
 }
 const loadProductDetails = async (req, res) => {
   try {
-
     const { id } = req.params;
     const product = await products.findById(id);
     if (!product) {
@@ -518,32 +475,25 @@ const addToCart = async (req, res) => {
     console.log("Add to cart request:", req.body);
     const userId = req.user._id;
     console.log("User ID:", userId);
-
     // Validate product exists
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
-
     // ✅ Find the size entry
     const sizeEntry = product.sizes.find((s) => s.size === size);
     if (!sizeEntry) return res.status(400).json({ message: "Invalid size selected" });
-
     // ✅ Find the color entry under that size
     const colorEntry = sizeEntry.colors.find((c) => c.color === color);
     if (!colorEntry) return res.status(400).json({ message: "Invalid color selected for this size" });
-
     // ✅ Check stock availability
     if (colorEntry.stock < quantity) {
       return res.status(400).json({ message: `Only ${colorEntry.stock} items available in stock` });
     }
-
     const price =
       product.discount > 0
         ? product.price - (product.price * product.discount) / 100
         : product.price;
-
     // ✅ Check if cart exists
     let cart = await Cart.findOne({ userId });
-
     if (!cart) {
       cart = new Cart({
         userId,
@@ -674,7 +624,7 @@ const updateUserProfile = async (req, res) => {
 };
 
 
- const getMemberExercises = async (req, res) => {
+const getMemberExercises = async (req, res) => {
   try {
     const exercises = await Exercise.find({
       gymOwnerId: req.gymOwnerId,
@@ -687,7 +637,7 @@ const updateUserProfile = async (req, res) => {
   }
 };
 
- const getMemberChallenges = async (req, res) => {
+const getMemberChallenges = async (req, res) => {
   try {
     const challenges = await Challenge.find({
       gymOwnerId: req.gymOwnerId

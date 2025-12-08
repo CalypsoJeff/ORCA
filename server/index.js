@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import session from 'express-session';
-import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
@@ -21,15 +20,10 @@ import { ensureSuperAdminExists } from './controllers/adminController.js';
 
 
 dotenv.config();
-console.log("JWT_SECRET:", process.env.JWT_SECRET);
 const app = express();
 const PORT = process.env.PORT || 3030;
-
-// Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-
-// Middleware
 app.use(cors({
   origin: ["http://localhost:5173", "https://orca-dusky.vercel.app"],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

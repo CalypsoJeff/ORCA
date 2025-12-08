@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
-import redis from '../helper/redisClient.js';
 import { sendEmailWithOTP, generateOTP } from '../helper/nodeMailer.js';
 import { generateResetToken, generateToken, validateResetToken } from '../helper/jwtHelper.js';
 import Admin from '../models/adminModel.js';
 import Users from '../models/userModel.js';
+import TempAdmin from '../models/tempAdmin.js';
 
 
 export const ensureSuperAdminExists = async () => {
@@ -17,7 +17,6 @@ export const ensureSuperAdminExists = async () => {
       isMainAdmin: true,
       status: "approved",
     });
-    console.log("✅ Super Admin Created");
   } else {
     console.log("ℹ️ Super Admin already exists.");
   }
@@ -33,14 +32,11 @@ const adminLogin = async (req, res) => {
     const isPasswordMatch = await bcrypt.compare(password, admin.password);
     if (!isPasswordMatch)
       return res.status(400).json({ error: "Invalid credentials." });
-
     if (admin.status !== "approved") {
       return res.status(403).json({ error: "Your account is pending approval by super admin." });
     }
-
     const role = admin.isMainAdmin ? "superadmin" : "admin";
     const { token, refreshToken } = generateToken(admin._id, admin.email, role);
-
     return res.status(200).json({
       success: true,
       message: "Login successful!",
@@ -85,33 +81,28 @@ const getApprovedAdmins = async (req, res) => {
   }
 };
 
-
-// Register Admin and Send OTP
 const registerAdmin = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    // Check if the admin already exists
     const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
+    if (existingAdmin)
       return res.status(400).json({ error: "Admin already exists" });
-    }
-    // Temporarily store admin data in Redis for verification later
-    await redis.set(
-      `tempAdmin:${email}`,
-      JSON.stringify({ name, email, password }),
-      "EX",
-      600
-    );
-    // Generate OTP
     const otp = generateOTP();
-    console.log("Generated OTP:", otp);
-    // Store OTP in Redis with expiration of 5 minutes
-    await redis.set(`otp:${email}`, otp, "EX", 300);
-    // Send OTP via email
+    await TempAdmin.findOneAndUpdate(
+      { email },
+      {
+        name,
+        email,
+        password,
+        otp,
+        otpExpiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      },
+      { upsert: true }
+    );
     await sendEmailWithOTP(email, otp, password, name);
-    return res.status(200).json({ message: "OTP sent to your email for verification." });
+    return res.status(200).json({ message: "OTP sent to your email." });
   } catch (error) {
-    console.error("Error in registration:", error);
+    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -120,54 +111,50 @@ const registerAdmin = async (req, res) => {
 const verifyOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
-    const storedOtp = await redis.get(`otp:${email}`);
-    console.log("Stored OTP from Redis:", storedOtp);
-    const userData = await redis.get(`tempAdmin:${email}`);
-    console.log("Retrieved userData:", userData);
-    if (!storedOtp || storedOtp !== otp) {
-      return res.status(400).json({ error: "Invalid or expired OTP" });
-    }
-    if (!userData) {
-      return res.status(400).json({ error: "User data expired. Please register again." });
-    }
-    let parsedData;
-    try {
-      parsedData = JSON.parse(userData);
-    } catch (err) {
-      console.error("Failed to parse userData:", err);
-      return res.status(500).json({ error: "Invalid user data stored. Please register again." });
-    }
-    const { name, email: userEmail, password } = parsedData;
-    console.log("Parsed Data:", name, userEmail, password);
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newAdmin = new Admin({ name, email: userEmail, password: hashedPassword });
-    await newAdmin.save();
-    await redis.del(`otp:${email}`);
-    await redis.del(`tempAdmin:${email}`);
-    return res.status(201).json({ message: "Admin registered successfully", newAdmin });
+    const temp = await TempAdmin.findOne({ email });
+    if (!temp)
+      return res.status(400).json({ error: "Data expired. Please register again." });
+    if (temp.otp !== otp)
+      return res.status(400).json({ error: "Invalid OTP" });
+    if (temp.otpExpiresAt < Date.now())
+      return res.status(400).json({ error: "OTP expired" });
+    const hashedPassword = await bcrypt.hash(temp.password, 10);
+    const newAdmin = await Admin.create({
+      name: temp.name,
+      email: temp.email,
+      password: hashedPassword,
+    });
+    await TempAdmin.deleteOne({ email });
+    return res.status(201).json({
+      message: "Admin registered successfully",
+      newAdmin,
+    });
   } catch (error) {
-    console.error("Error verifying OTP:", error);
+    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
-}
+};
 
 // Resend OTP
 const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: "Email is required to resend OTP" });
-    }
     const existingAdmin = await Admin.findOne({ email });
-    if (existingAdmin) {
-      return res.status(400).json({ error: "Admin already exists. Cannot resend OTP." });
-    }
+    if (existingAdmin)
+      return res.status(400).json({ error: "Admin already exists." });
     const otp = generateOTP();
-    await redis.setex(email, 300, otp);
+    await TempAdmin.findOneAndUpdate(
+      { email },
+      {
+        otp,
+        otpExpiresAt: Date.now() + 5 * 60 * 1000,
+      },
+      { upsert: true }
+    );
     await sendEmailWithOTP(email, otp);
-    return res.status(200).json({ message: "OTP has been resent to your email." });
+    return res.status(200).json({ message: "OTP resent successfully." });
   } catch (error) {
-    console.error("Error resending OTP:", error);
+    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
 };
