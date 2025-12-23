@@ -6,7 +6,7 @@ import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import paymentRoutes from "./routes/paymentRoutes.js";
-import { dbConnect } from './config/DB.js'; // Assuming DB.js has a named export `dbConnect`
+import { dbConnect } from './config/DB.js'; 
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';

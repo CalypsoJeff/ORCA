@@ -36,6 +36,7 @@ const UserRoutes = () => {
       <Route path="/otp" element={<Otp />} />
       <Route path="/fitness" element={<Fitness />} />
       <Route path="/home" element={<LandingPage />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/shop" element={<Products />} />
       <Route path="/product/:id" element={<ProductDetails />} />
       <Route path="/competitions" element={<Competitions />} />
@@ -46,19 +47,16 @@ const UserRoutes = () => {
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/shipping-policy" element={<ShippingPolicy />} />
       <Route path="/contact" element={<Contact />} />
+      <Route path="/rides" element={<RidersPage />} />
+      <Route path="/trekking" element={<Trekkings />} />
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>
-        <Route path="/" element={<LandingPage />} />
         <Route path="/account/profile" element={<UserProfile />} />
         <Route path="/account/addresses" element={<Addresses />} />
         <Route path="/order/success/:orderId" element={<OrderSuccess />} />
-        {/* <Route path="/account/dashboard" element={<AccountDashboard />} /> */}
         <Route path="/account/orders" element={<UserOrders />} />
         <Route path="/account/orders/:orderId" element={<OrderDetails />} />
-        {/* <Route path="/account/wishlist" element={<WishlistPage />} /> */}
-        {/* <Route path="/account/bookings" element={<BookingsPage />} /> */}
-        {/* <Route path="/account/addresses" element={<AddressesPage />} /> */}
         {/* <Route
           path="/account/change-password"
           element={<ChangePasswordPage />}
@@ -67,16 +65,13 @@ const UserRoutes = () => {
           path="/account/forgot-password"
           element={<ForgotPasswordPage />}
         /> */}
-        <Route path="/fitness" element={<Fitness />} />
         <Route path="/checkout" element={<CheckoutPage />} />
 
         <Route
           path="/competition/:id/payment-confirmation"
           element={<PaymentConfirmation />}
         />
-        <Route path="/trekking" element={<Trekkings />} />
         <Route path="/cart" element={<Carts />} />
-        <Route path="/rides" element={<RidersPage />} />
       </Route>
     </Routes>
   );

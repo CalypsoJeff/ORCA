@@ -1,12 +1,11 @@
-
 const PrivacyPolicy = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 mt-20 mb-16 leading-7">
       <h1 className="text-3xl font-bold mb-4">Privacy Policy</h1>
       <p>
         Orca (“Company”, “we”, “our”, “us”) operates the website
-        orca-dusky.vercel.app (“Website”). This Privacy Policy explains how we
-        collect, use, and protect your personal information.
+        https://orcasportsclub.in (“Website”). This Privacy Policy explains how
+        we collect, use, and protect your personal information.
       </p>
 
       <h2 className="text-xl font-semibold mt-6 mb-2">
@@ -39,7 +38,7 @@ const PrivacyPolicy = () => {
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Contact</h2>
       <p>
-        Email: <strong>support@yourdomain.com</strong>
+        Email: <strong>orca.unofficial@gmail.com</strong>
       </p>
     </div>
   );

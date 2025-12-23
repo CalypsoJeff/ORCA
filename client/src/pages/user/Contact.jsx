@@ -7,10 +7,10 @@ const Contact = () => {
 
       <ul className="list-disc ml-6 mt-4">
         <li>
-          Email: <strong>support@yourdomain.com</strong>
+          Email: <strong>orca.unofficial@gmail.com</strong>
         </li>
         <li>
-          Phone: <strong>+91 XXXXX XXXXX</strong>
+          Phone: <strong>+91 9206 879923</strong>
         </li>
         <li>
           Address: <strong>Your shop/office address</strong>

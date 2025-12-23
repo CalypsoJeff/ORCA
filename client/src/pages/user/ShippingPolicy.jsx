@@ -1,4 +1,3 @@
-
 const ShippingPolicy = () => {
   return (
     <div className="max-w-4xl mx-auto p-6 mt-20 mb-16 leading-7">
@@ -23,7 +22,7 @@ const ShippingPolicy = () => {
 
       <h2 className="text-xl font-semibold mt-6 mb-2">Contact</h2>
       <p>
-        Email: <strong>shipping@yourdomain.com</strong>
+        Email: <strong>orca.unofficial@gmail.com</strong>
       </p>
     </div>
   );
