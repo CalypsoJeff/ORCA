@@ -8,28 +8,10 @@ import { verifyCheckoutSignature, verifyWebhookSignature } from "../services/raz
 export const createOrderFromCart = async (req, res) => {
     try {
         const userId = req.user?._id || req.body.userId;
-        if (!userId)
-            return res.status(400).json({ error: "Missing user" });
+        if (!userId) return res.status(400).json({ error: "Missing user" });
+
         const { addressId } = req.body;
-        if (!addressId)
-            return res.status(400).json({ error: "Missing addressId" });
-
-        const existingOrder = await Order.findOne({
-            user: userId,
-            status: { $in: ["Pending", "AwaitingPayment"] },
-            "payment.gateway": "razorpay",
-            "payment.status": "PENDING",
-        });
-
-        if (existingOrder?.payment?.razorpayOrderId) {
-            return res.json({
-                key: process.env.RAZORPAY_KEY_ID,
-                amount: Math.round(existingOrder.grandTotal * 100),
-                currency: existingOrder.currency || "INR",
-                razorpayOrderId: existingOrder.payment.razorpayOrderId,
-                orderId: existingOrder._id,
-            });
-        }
+        if (!addressId) return res.status(400).json({ error: "Missing addressId" });
 
         const cart = await Cart.findOne({ userId }).lean();
         if (!cart || !cart.items?.length)
@@ -45,10 +27,9 @@ export const createOrderFromCart = async (req, res) => {
         }));
 
         const subTotal = products.reduce((s, it) => s + it.total, 0);
-
         const grandTotalRounded = Math.round(subTotal * 100) / 100;
 
-        let order = await Order.create({
+        const order = await Order.create({
             user: userId,
             address: addressId,
             products,
@@ -57,15 +38,16 @@ export const createOrderFromCart = async (req, res) => {
             discountTotal: 0,
             grandTotal: grandTotalRounded,
             currency: "INR",
-            status: "Pending",
+            status: "Pending", // valid enum
             payment: {
-                status: "CREATED",
+                status: "PENDING", // payment lifecycle
                 gateway: "razorpay",
             },
+
         });
 
-        order = await Order.findById(order._id);
         const finalPaise = Math.round(order.grandTotal * 100);
+
         const rzpOrder = await rzp.orders.create({
             amount: finalPaise,
             currency: "INR",
@@ -76,10 +58,10 @@ export const createOrderFromCart = async (req, res) => {
         order.payment.razorpayOrderId = rzpOrder.id;
         order.payment.status = "PENDING";
         order.payment.receipt = rzpOrder.receipt;
-        order.status = "AwaitingPayment";
         await order.save();
-        console.log("KEY:", process.env.RAZORPAY_KEY_ID);
-        console.log("ORDER:", rzpOrder.id);
+
+        console.log("LIVE KEY:", process.env.RAZORPAY_KEY_ID);
+        console.log("RZP ORDER:", rzpOrder.id);
 
         return res.json({
             key: process.env.RAZORPAY_KEY_ID,
@@ -88,7 +70,6 @@ export const createOrderFromCart = async (req, res) => {
             razorpayOrderId: rzpOrder.id,
             orderId: order._id,
         });
-
     } catch (err) {
         console.error("Order Creation Error:", err);
         return res.status(500).json({ error: err.message });
@@ -141,31 +122,31 @@ export const handleWebhook = async (req, res) => {
 
 // Razorpay v2 redirect callback (UX only, not source of truth)
 export const razorpayCallback = async (req, res) => {
-  try {
-    // Razorpay sends x-www-form-urlencoded
-    const body = new URLSearchParams(req.body.toString());
-    const razorpayOrderId = body.get("razorpay_order_id");
+    try {
+        // Razorpay sends x-www-form-urlencoded
+        const body = new URLSearchParams(req.body.toString());
+        const razorpayOrderId = body.get("razorpay_order_id");
 
-    if (!razorpayOrderId) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        if (!razorpayOrderId) {
+            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        }
+
+        const order = await Order.findOne({
+            "payment.razorpayOrderId": razorpayOrderId,
+        });
+
+        if (!order) {
+            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        }
+
+        // ⚠️ Do NOT mark PAID here
+        // Webhook (payment.captured / order.paid) is the source of truth
+
+        return res.redirect(
+            `${process.env.FRONTEND_URL}/order/success/${order._id}`
+        );
+    } catch (err) {
+        console.error("Razorpay callback error:", err);
+        return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
     }
-
-    const order = await Order.findOne({
-      "payment.razorpayOrderId": razorpayOrderId,
-    });
-
-    if (!order) {
-      return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
-    }
-
-    // ⚠️ Do NOT mark PAID here
-    // Webhook (payment.captured / order.paid) is the source of truth
-
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/order/success/${order._id}`
-    );
-  } catch (err) {
-    console.error("Razorpay callback error:", err);
-    return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
-  }
 };
