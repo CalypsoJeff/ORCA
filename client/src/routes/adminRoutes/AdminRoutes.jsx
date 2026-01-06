@@ -15,6 +15,7 @@ import PendingApproval from "../../pages/admin/PendingApproval";
 import AdminRequests from "../../pages/admin/AdminRequests";
 import OrdersList from "../../pages/admin/OrdersList";
 import OrderDetails from "../../pages/admin/OrderDetails";
+import GymRequests from "../../pages/admin/GymRequests";
 // import UserPrivateRoutes from "./UserPrivateRoutes";
 
 const AdminRoutes = () => {
@@ -27,7 +28,6 @@ const AdminRoutes = () => {
       <Route path="/otp" element={<VerifyOtpPage />} />
       <Route path="*" element={<NotFoundPage />} />
       {/* Private Routes */}
-      {/* <Route element={<UserPrivateRoutes />}> */}
       <Route path="/" element={<Home />} />
       {/* <Route path="/profile" element={<Profile />} /> */}
       <Route path="/dashboard" element={<Dashboard />} />
@@ -39,6 +39,7 @@ const AdminRoutes = () => {
       <Route path="/userlist" element={<UserList />} />
       <Route path="/orders" element={<OrdersList />} />
       <Route path="/orders/:id" element={<OrderDetails />} />
+      <Route path="/admin/gym-requests" element={<GymRequests />} />
     </Routes>
   );
 };

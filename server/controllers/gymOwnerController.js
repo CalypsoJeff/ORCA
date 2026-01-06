@@ -32,34 +32,26 @@ export const loginGymOwner = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        // 1️⃣ Check user
         const user = await User.findOne({ email }).select("+password");
-        if (!user) return res.status(404).json({ message: "User not found." });
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
 
-        // if (user.role !== "GymOwner")
-        //     return res.status(403).json({ message: "Not a gym owner account." });
+        if (user.status !== "Active")
+            return res.status(403).json({ message: "Account inactive" });
 
-        // 2️⃣ Verify password
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword)
-            return res.status(401).json({ message: "Invalid credentials." });
-        console.log("REQ BODY:", req.body);
-        console.log("Password from req:", req.body.password);
-        console.log("Stored hashed password:", user.password);
+            return res.status(401).json({ message: "Invalid credentials" });
 
-        // 3️⃣ Check approval
         const gymOwner = await GymOwner.findOne({ userId: user._id });
         if (!gymOwner)
-            return res.status(404).json({ message: "Gym owner profile missing." });
+            return res.status(403).json({ message: "Not a gym owner account" });
 
         if (!gymOwner.isApproved)
-            return res
-                .status(403)
-                .json({ message: "Your account is pending admin approval." });
-        console.log("LOGIN JWT SECRET =", process.env.JWT_SECRET);
-        // 4️⃣ Create JWT
+            return res.status(403).json({ message: "Pending admin approval" });
+
         const token = jwt.sign(
-            { _id: user._id, role: user.role, gymOwnerId: gymOwner._id },
+            { userId: user._id, gymOwnerId: gymOwner._id },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
@@ -71,13 +63,13 @@ export const loginGymOwner = async (req, res) => {
                 id: user._id,
                 name: user.name,
                 email: user.email,
-                role: user.role,
             },
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 };
+
 
 // Admin: view pending gym owners
 export const getPendingGymOwners = async (req, res) => {

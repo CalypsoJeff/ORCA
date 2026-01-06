@@ -10,17 +10,31 @@ export const createOrderFromCart = async (req, res) => {
         const userId = req.user?._id || req.body.userId;
         if (!userId)
             return res.status(400).json({ error: "Missing user" });
-
         const { addressId } = req.body;
         if (!addressId)
             return res.status(400).json({ error: "Missing addressId" });
 
-        // Fetch cart
+        const existingOrder = await Order.findOne({
+            user: userId,
+            status: { $in: ["Pending", "AwaitingPayment"] },
+            "payment.gateway": "razorpay",
+            "payment.status": "PENDING",
+        });
+
+        if (existingOrder?.payment?.razorpayOrderId) {
+            return res.json({
+                key: process.env.RAZORPAY_KEY_ID,
+                amount: Math.round(existingOrder.grandTotal * 100),
+                currency: existingOrder.currency || "INR",
+                razorpayOrderId: existingOrder.payment.razorpayOrderId,
+                orderId: existingOrder._id,
+            });
+        }
+
         const cart = await Cart.findOne({ userId }).lean();
         if (!cart || !cart.items?.length)
             return res.status(400).json({ error: "Cart empty" });
 
-        // Build products list
         const products = cart.items.map(i => ({
             product: i.productId,
             quantity: Number(i.quantity),
@@ -30,16 +44,10 @@ export const createOrderFromCart = async (req, res) => {
             total: Number(i.price) * Number(i.quantity),
         }));
 
-        // Safe subtotal
         const subTotal = products.reduce((s, it) => s + it.total, 0);
 
-        // IMPORTANT: round to 2 decimals (₹ format)
         const grandTotalRounded = Math.round(subTotal * 100) / 100;
 
-        // Convert to paise (always integer)
-        const totalPaise = Math.round(grandTotalRounded * 100);
-
-        // 1️⃣ Create order FIRST so mongoose pre-save can normalize data
         let order = await Order.create({
             user: userId,
             address: addressId,
@@ -47,32 +55,32 @@ export const createOrderFromCart = async (req, res) => {
             subTotal: grandTotalRounded,
             taxTotal: 0,
             discountTotal: 0,
-            grandTotal: grandTotalRounded, // safe 2-dec float
+            grandTotal: grandTotalRounded,
             currency: "INR",
             status: "Pending",
-            payment: { status: "CREATED", gateway: "razorpay" },
+            payment: {
+                status: "CREATED",
+                gateway: "razorpay",
+            },
         });
 
-        // 2️⃣ Reload order AFTER pre-save updates totals
         order = await Order.findById(order._id);
-
-        // 3️⃣ Convert final DB grandTotal to paise
         const finalPaise = Math.round(order.grandTotal * 100);
-
-        // 4️⃣ Create Razorpay Order EXACTLY matching paise amount
         const rzpOrder = await rzp.orders.create({
-            amount: finalPaise,      // paise integer (required!)
+            amount: finalPaise,
             currency: "INR",
             receipt: `ord_${order._id}`,
             notes: { orderId: String(order._id) },
         });
 
-        // 5️⃣ Save RZP order details
         order.payment.razorpayOrderId = rzpOrder.id;
         order.payment.status = "PENDING";
+        order.payment.receipt = rzpOrder.receipt;
+        order.status = "AwaitingPayment";
         await order.save();
+        console.log("KEY:", process.env.RAZORPAY_KEY_ID);
+        console.log("ORDER:", rzpOrder.id);
 
-        // 6️⃣ Send response to frontend
         return res.json({
             key: process.env.RAZORPAY_KEY_ID,
             amount: rzpOrder.amount,
@@ -86,6 +94,7 @@ export const createOrderFromCart = async (req, res) => {
         return res.status(500).json({ error: err.message });
     }
 };
+
 
 
 export const verifyPayment = async (req, res) => {
@@ -128,4 +137,35 @@ export const handleWebhook = async (req, res) => {
     } catch (err) {
         return res.status(500).send(err.message);
     }
+};
+
+// Razorpay v2 redirect callback (UX only, not source of truth)
+export const razorpayCallback = async (req, res) => {
+  try {
+    // Razorpay sends x-www-form-urlencoded
+    const body = new URLSearchParams(req.body.toString());
+    const razorpayOrderId = body.get("razorpay_order_id");
+
+    if (!razorpayOrderId) {
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+    }
+
+    const order = await Order.findOne({
+      "payment.razorpayOrderId": razorpayOrderId,
+    });
+
+    if (!order) {
+      return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+    }
+
+    // ⚠️ Do NOT mark PAID here
+    // Webhook (payment.captured / order.paid) is the source of truth
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/order/success/${order._id}`
+    );
+  } catch (err) {
+    console.error("Razorpay callback error:", err);
+    return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+  }
 };

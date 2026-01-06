@@ -8,7 +8,7 @@
         getProfile,
         updateProfile,
     } from "../controllers/gymOwnerController.js";
-    import { isGymOwner } from "../middleware/gymAuth.js";
+   import { gymOwnerAuth } from "../middleware/gymAuth.js";
     import { verifyAdmin } from "../middleware/adminAuth.js";
 
     const router = express.Router();
@@ -21,9 +21,9 @@
     router.get("/pending", verifyAdmin, getPendingGymOwners);
 
     // Gym Owner (after approval)
-    router.post("/members/add", isGymOwner, addMember);
-    router.get("/members", isGymOwner, getMembers);
-    router.get("/profile", isGymOwner, getProfile);
-    router.put("/profile", isGymOwner, updateProfile);
+    router.post("/members/add", gymOwnerAuth, addMember);
+    router.get("/members", gymOwnerAuth, getMembers);
+    router.get("/profile", gymOwnerAuth, getProfile);
+    router.put("/profile", gymOwnerAuth, updateProfile);
 
     export default router;

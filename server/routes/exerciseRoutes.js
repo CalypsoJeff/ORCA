@@ -6,14 +6,14 @@ import {
     getExerciseById,
     updateExercise
 } from "../controllers/exerciseController.js";
-import { isGymOwner } from "../middleware/gymAuth.js";
+import { gymOwnerAuth   } from "../middleware/gymAuth.js";
 
 const router = express.Router();
 
-router.post("/add", isGymOwner, addExercise);
-router.get("/", isGymOwner, getExercises);
-router.get("/:id", isGymOwner, getExerciseById);
-router.put("/:id", isGymOwner, updateExercise);
-router.delete("/:id", isGymOwner, deleteExercise);
+router.post("/add", gymOwnerAuth , addExercise);
+router.get("/", gymOwnerAuth , getExercises);
+router.get("/:id", gymOwnerAuth , getExerciseById);
+router.put("/:id", gymOwnerAuth , updateExercise);
+router.delete("/:id", gymOwnerAuth , deleteExercise);
 
 export default router;

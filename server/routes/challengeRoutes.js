@@ -6,14 +6,14 @@ import {
   updateChallenge,
   deleteChallenge
 } from "../controllers/challengeController.js";
-import { isGymOwner } from "../middleware/gymAuth.js";
+import { gymOwnerAuth  } from "../middleware/gymAuth.js";
 
 const router = express.Router();
 
-router.post("/", isGymOwner, createChallenge);
-router.get("/", isGymOwner, getChallenges);
-router.get("/:id", isGymOwner, getChallengeById);
-router.patch("/:id", isGymOwner, updateChallenge);
-router.delete("/:id", isGymOwner, deleteChallenge);
+router.post("/", gymOwnerAuth , createChallenge);
+router.get("/", gymOwnerAuth , getChallenges);
+router.get("/:id", gymOwnerAuth , getChallengeById);
+router.patch("/:id", gymOwnerAuth , updateChallenge);
+router.delete("/:id", gymOwnerAuth , deleteChallenge);
 
 export default router;

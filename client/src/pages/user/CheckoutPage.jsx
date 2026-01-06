@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Button } from "flowbite-react";
-import { useNavigate, Link } from "react-router-dom"; 
+import { useNavigate, Link } from "react-router-dom";
 import NavBar from "../../components/user/NavBar";
 import { loadCart } from "../../api/endpoints/products/user-products";
 import authInstanceAxios from "../../api/middlewares/interceptor";
@@ -81,30 +81,28 @@ const CheckoutPage = () => {
         amount: payload.amount,
         currency: payload.currency,
         order_id: payload.razorpayOrderId,
+
         name: "ORCA E-Commerce",
         description: "Order payment",
+
+        // ✅ REQUIRED FOR v2 (IMPORTANT)
+        callback_url: `${
+          import.meta.env.VITE_API_BASE_URL
+        }/api/payments/razorpay/callback`,
+        redirect: true,
+
         prefill: {
           name: user?.name || "",
           email: user?.email || "",
           contact: user?.phone || "",
         },
-        notes: { orderId: String(payload.orderId) },
-        theme: { color: "#0ea5e9" },
-        handler: async (resp) => {
-          try {
-            const { data } = await authInstanceAxios.post(
-              "/api/payments/razorpay/verify",
-              resp
-            );
-            if (data.status === "success") {
-              navigate(`/order/success/${data.orderId}`);
-            } else {
-              toast.error(data.error || "Payment verification failed");
-            }
-          } catch (e) {
-            console.error(e);
-            toast.error("Payment verification failed");
-          }
+
+        notes: {
+          orderId: String(payload.orderId),
+        },
+
+        theme: {
+          color: "#0ea5e9",
         },
       };
 
