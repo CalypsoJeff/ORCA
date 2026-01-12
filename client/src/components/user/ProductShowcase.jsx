@@ -91,7 +91,8 @@ const ProductShowcase = () => {
           </p>
         </div>
 
-        <div className="w-full overflow-hidden">
+        <div className="w-full overflow-hidden touch-pan-y">
+
           <InfiniteSlider
             items={productCards}
             direction="left"

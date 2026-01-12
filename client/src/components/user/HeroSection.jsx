@@ -36,14 +36,22 @@ const HeroSection = () => {
   return (
     <section
       ref={heroRef}
-      className="relative min-h-[100vh] flex flex-col items-center justify-center overflow-hidden pt-20 pb-16 md:pb-24 bg-black"
+      className="
+    relative
+    min-h-[100svh]
+    flex flex-col items-center justify-center
+    pt-20 pb-16 md:pb-24
+    bg-black
+    overflow-x-hidden
+    md:overflow-hidden
+  "
       style={{
         "--mouse-x": "0.5",
         "--mouse-y": "0.5",
       }}
     >
       {/* Animated Sparkles Background */}
-      <div className="absolute inset-0 w-full h-full">
+     <div className="absolute inset-0 pointer-events-none">
         <Waves
           id="heroSparkles"
           background="transparent"

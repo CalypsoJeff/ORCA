@@ -16,8 +16,9 @@ export default function OrdersList() {
     const fetchOrders = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3030/api/orders/admin/all"
+          `${import.meta.env.VITE_API_BASE_URL}/api/orders/admin/all`
         );
+
         setOrders(response.data);
       } catch (err) {
         console.error("Error loading orders:", err);

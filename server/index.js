@@ -25,7 +25,7 @@ const PORT = process.env.PORT || 3030;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use(cors({
-  origin: ["http://localhost:5173", "https://orca-dusky.vercel.app"],
+  origin: ["http://localhost:5173", "https://orca-dusky.vercel.app","https://orcasportsclub.in","https://www.orcasportsclub.in"],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
 }));

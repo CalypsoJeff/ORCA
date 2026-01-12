@@ -10,40 +10,18 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../features/auth/authSlice";
-import authInstanceAxios from "../../api/middlewares/interceptor"; // ✅ use your axios with token
+import authInstanceAxios from "../../api/middlewares/interceptor";
 
 const NavBar = () => {
   const [scrolled, setScrolled] = useState(false);
-  const [cartCount, setCartCount] = useState(0); // 🟢 store cart item count
+  const [cartCount, setCartCount] = useState(0);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
-  const navigate = useNavigate();
 
-  // 🔹 Scroll effect
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // 🔹 Fetch cart count when user logged in
-  useEffect(() => {
-    if (!user?._id) return;
-    const fetchCartCount = async () => {
-      try {
-        const res = await authInstanceAxios.get("/api/user/cart");
-        if (res.data?.items) {
-          setCartCount(res.data.items.length);
-        }
-      } catch (err) {
-        console.error("Error fetching cart count:", err);
-      }
-    };
-    fetchCartCount();
-  }, [user]);
-
-  const handleLogout = () => dispatch(logout());
   const isLandingPage = location.pathname === "/home";
 
   const navItems = [
@@ -52,123 +30,209 @@ const NavBar = () => {
     { name: "Shop", url: "/shop", icon: ShoppingCart },
   ];
 
+  /* 🔹 Navbar shadow on scroll */
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* 🔹 Fetch cart count */
+  useEffect(() => {
+    if (!user?._id) return;
+    authInstanceAxios
+      .get("/api/user/cart")
+      .then((res) => setCartCount(res.data?.items?.length || 0))
+      .catch(() => {});
+  }, [user]);
+
+  /* 🔹 Close menu on route change */
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  /* 🔹 Lock body scroll */
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? "hidden" : "auto";
+    return () => (document.body.style.overflow = "auto");
+  }, [isMenuOpen]);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
+
   return (
-    <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 px-6 md:px-10 py-4",
-        scrolled ? "bg-black/80 backdrop-blur-md shadow-md" : "bg-transparent"
-      )}
-    >
-      <div className="container mx-auto flex items-center justify-between">
-        {/* Brand */}
-        <span
-          className="text-2xl font-display font-bold tracking-tight text-sky-600 cursor-pointer"
-          onClick={() => navigate("/home")}
-        >
-          ORCA
-        </span>
-
-        {/* Nav links */}
-        <nav className="hidden md:flex items-center space-x-8">
-          {navItems.map(({ name, url, icon: Icon }) => (
-            <Link
-              key={name}
-              to={url}
-              className={cn(
-                "flex items-center text-sm font-medium transition-colors no-underline hover-link",
-                isLandingPage
-                  ? "text-white hover:text-sky-300"
-                  : "text-black hover:text-sky-600"
-              )}
-            >
-              {Icon && <Icon className="mr-2 h-4 w-4" />}
-              {name}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Right Section */}
-        <div className="flex items-center space-x-4">
-          {/* 🛒 Cart Button */}
-          <button
-            onClick={() => navigate("/cart")}
-            className="relative flex items-center justify-center p-2 rounded-full bg-transparent hover:bg-sky-100 transition-all duration-200"
-            title="View Cart"
+    <>
+      {/* ================= HEADER ================= */}
+      <header
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 px-6 md:px-10 py-4 transition-all duration-300",
+          scrolled
+            ? "bg-black/80 backdrop-blur-md shadow-md"
+            : "bg-transparent"
+        )}
+      >
+        <div className="container mx-auto flex items-center justify-between">
+          {/* Logo */}
+          <span
+            className="text-2xl font-bold text-sky-600 cursor-pointer"
+            onClick={() => navigate("/home")}
           >
-            <ShoppingCart
-              className={cn(
-                "h-6 w-6 transition-colors",
-                isLandingPage
-                  ? "text-white hover:text-sky-200"
-                  : "text-sky-600 hover:text-sky-700"
-              )}
-            />
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                {cartCount}
-              </span>
-            )}
-          </button>
+            ORCA
+          </span>
 
-          {/* 👤 User Section */}
-          {user ? (
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2 hover:bg-sky-100 rounded-full px-3 py-1.5 transition-all duration-200 shadow-sm hover:shadow-md">
-                <div
-                  onClick={() => navigate("/account/profile")}
-                  className="relative cursor-pointer"
-                >
-                  <UserCircle className="h-6 w-6 text-sky-600 hover:text-sky-700 transition-colors" />
-                  <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-green-500 border border-white"></span>
-                </div>
-                {user.name && (
-                  <span className="text-sm font-medium text-sky-700">
-                    {user.name}
-                  </span>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center space-x-8">
+            {navItems.map(({ name, url, icon: Icon }) => (
+              <Link
+                key={name}
+                to={url}
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium transition-colors",
+                  isLandingPage
+                    ? "text-white hover:text-sky-300"
+                    : "text-black hover:text-sky-600"
                 )}
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="flex items-center justify-center p-2 rounded-full bg-transparent hover:bg-red-100 text-red-500 transition-all duration-200"
-                title="Logout"
               >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          ) : (
-            <Link
-              to="/login"
-              className="hidden md:inline-flex h-10 items-center justify-center rounded-md px-6 text-sm font-medium transition-colors no-underline bg-sky-600 text-white hover:bg-sky-700"
-            >
-              Login / Signup
-            </Link>
-          )}
+                <Icon className="h-4 w-4" />
+                {name}
+              </Link>
+            ))}
+          </nav>
 
-          {/* ☰ Mobile Menu Button */}
-          <button
-            className="md:hidden rounded-md p-2"
-            aria-label="Menu"
-            style={{ color: isLandingPage ? "white" : "black" }}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-6 h-6"
+          {/* Right Section */}
+          <div className="flex items-center gap-4">
+            {/* Cart */}
+            <button
+              onClick={() => navigate("/cart")}
+              className="relative p-2 rounded-full hover:bg-sky-100"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+              <ShoppingCart
+                className={cn(
+                  "h-6 w-6",
+                  isLandingPage ? "text-white" : "text-sky-600"
+                )}
               />
-            </svg>
-          </button>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] px-1.5 rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {/* Desktop User */}
+            {user ? (
+              <div className="hidden md:flex items-center gap-2">
+                <UserCircle className="h-6 w-6 text-sky-600" />
+                <span className="text-sm">{user.name}</span>
+                <button onClick={handleLogout}>
+                  <LogOut className="h-5 w-5 text-red-500" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="hidden md:flex h-10 px-6 items-center rounded-md bg-sky-600 text-white hover:bg-sky-700"
+              >
+                Login / Signup
+              </Link>
+            )}
+
+            {/* Hamburger */}
+            <button
+              className="md:hidden relative w-8 h-8"
+              onClick={() => setIsMenuOpen((v) => !v)}
+            >
+              <span
+                className={cn(
+                  "absolute left-1/2 top-2 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
+                  isMenuOpen && "rotate-45 top-4"
+                )}
+              />
+              <span
+                className={cn(
+                  "absolute left-1/2 top-4 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
+                  isMenuOpen && "opacity-0"
+                )}
+              />
+              <span
+                className={cn(
+                  "absolute left-1/2 top-6 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
+                  isMenuOpen && "-rotate-45 top-4"
+                )}
+              />
+            </button>
+          </div>
         </div>
+      </header>
+
+      {/* ================= MOBILE DRAWER ================= */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity md:hidden",
+          isMenuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => setIsMenuOpen(false)}
+      >
+        <aside
+          className={cn(
+            "absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out",
+            isMenuOpen ? "translate-x-0" : "translate-x-full"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6 border-b">
+            <h2 className="text-xl font-bold text-sky-600">Menu</h2>
+            {cartCount > 0 && (
+              <p className="mt-2 text-sm text-gray-600">
+                🛒 Items in cart:{" "}
+                <span className="font-semibold">{cartCount}</span>
+              </p>
+            )}
+          </div>
+
+          <nav className="flex flex-col divide-y">
+            {navItems.map(({ name, url, icon: Icon }) => (
+              <Link
+                key={name}
+                to={url}
+                className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100"
+              >
+                <Icon className="h-5 w-5 text-sky-600" />
+                {name}
+              </Link>
+            ))}
+
+            {user ? (
+              <>
+                <Link
+                  to="/account/profile"
+                  className="px-6 py-4 hover:bg-gray-100"
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-6 py-4 text-left text-red-600 hover:bg-red-50"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="px-6 py-4 text-sky-600 hover:bg-sky-50"
+              >
+                Login / Signup
+              </Link>
+            )}
+          </nav>
+        </aside>
       </div>
-    </header>
+    </>
   );
 };
 

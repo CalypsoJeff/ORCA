@@ -40,7 +40,7 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+   <div className="relative min-h-screen bg-black text-white overflow-x-hidden">
       <NavBar />
       <main>
         <HeroSection />

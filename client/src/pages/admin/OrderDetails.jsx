@@ -2,6 +2,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { ArrowLeft, Package } from "lucide-react";
+import CONFIG_KEYS from "../../config";
+const API_URL = CONFIG_KEYS.API_BASE_URL;
 
 export default function OrderDetails() {
   const { id } = useParams();
@@ -11,7 +13,7 @@ export default function OrderDetails() {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:3030/api/orders/admin/${id}`)
+      .get(`${API_URL}/orders/admin/${id}`)
       .then((res) => {
         setOrder(res.data);
         setStatus(res.data.status || "Pending");
@@ -21,7 +23,7 @@ export default function OrderDetails() {
 
   const handleStatusChange = async () => {
     try {
-      await axios.put(`http://localhost:3030/api/orders/admin/${id}`, {
+      await axios.put(`${API_URL}/orders/admin/${id}`, {
         status,
       });
       alert("Order status updated successfully!");
