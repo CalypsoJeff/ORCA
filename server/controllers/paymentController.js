@@ -3,21 +3,21 @@ import Cart from "../models/cartModel.js";
 import Order from "../models/orderModel.js";
 import { createRzpOrder } from "../services/razorpayService.js";
 import rzp from "../services/razorpayService.js";
-import { verifyCheckoutSignature, verifyWebhookSignature } from "../services/razorpayVerify.js";
+import {
+    verifyCheckoutSignature,
+    verifyWebhookSignature,
+} from "../services/razorpayVerify.js";
 
 export const createOrderFromCart = async (req, res) => {
     try {
         const userId = req.user?._id || req.body.userId;
         if (!userId) return res.status(400).json({ error: "Missing user" });
-
         const { addressId } = req.body;
         if (!addressId) return res.status(400).json({ error: "Missing addressId" });
-
         const cart = await Cart.findOne({ userId }).lean();
         if (!cart || !cart.items?.length) {
             return res.status(400).json({ error: "Cart empty" });
         }
-
         const products = cart.items.map((i) => ({
             product: i.productId,
             quantity: Number(i.quantity),
@@ -30,7 +30,6 @@ export const createOrderFromCart = async (req, res) => {
         const subTotal = products.reduce((s, it) => s + it.total, 0);
         const grandTotalRounded = Math.round(subTotal * 100) / 100;
 
-        // ✅ Create order as "PendingPayment" and set expiry (15 mins)
         const order = await Order.create({
             user: userId,
             address: addressId,
@@ -41,8 +40,8 @@ export const createOrderFromCart = async (req, res) => {
             grandTotal: grandTotalRounded,
             currency: "INR",
 
-            status: "PendingPayment", // ✅ NEW status (add this to your enum)
-            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // ✅ add field in schema
+            status: "PendingPayment",
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
 
             payment: {
                 status: "PENDING",
@@ -78,14 +77,19 @@ export const createOrderFromCart = async (req, res) => {
     }
 };
 
-
-
 export const verifyPayment = async (req, res) => {
     try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-        const ok = verifyCheckoutSignature({ razorpay_order_id, razorpay_payment_id, razorpay_signature });
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+            req.body;
+        const ok = verifyCheckoutSignature({
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+        });
         if (!ok) return res.status(400).json({ status: "failure" });
-        const order = await Order.findOne({ "payment.razorpayOrderId": razorpay_order_id });
+        const order = await Order.findOne({
+            "payment.razorpayOrderId": razorpay_order_id,
+        });
         if (!order) return res.status(404).json({ error: "Order not found" });
         if (order.payment.status !== "PAID") {
             order.payment.status = "PAID";
@@ -93,7 +97,10 @@ export const verifyPayment = async (req, res) => {
             order.payment.razorpaySignature = razorpay_signature;
             order.status = "Confirmed";
             await order.save();
-            await Cart.updateOne({ userId: order.user }, { $set: { items: [], totalPrice: 0 } });
+            await Cart.updateOne(
+                { userId: order.user },
+                { $set: { items: [], totalPrice: 0 } }
+            );
         }
         return res.json({ status: "success", orderId: order._id });
     } catch (err) {
@@ -104,7 +111,7 @@ export const verifyPayment = async (req, res) => {
 export const handleWebhook = async (req, res) => {
     try {
         const signature = req.headers["x-razorpay-signature"];
-        const rawBody = req.body; // ✅ Buffer
+        const rawBody = req.body;
 
         const verified = verifyWebhookSignature(rawBody, signature);
         if (!verified) return res.status(400).send("Bad signature");
@@ -117,15 +124,16 @@ export const handleWebhook = async (req, res) => {
             const rzpOrderId = payment.order_id;
             const rzpPaymentId = payment.id;
 
-            const order = await Order.findOne({ "payment.razorpayOrderId": rzpOrderId });
+            const order = await Order.findOne({
+                "payment.razorpayOrderId": rzpOrderId,
+            });
             if (order && order.payment.status !== "PAID") {
                 order.payment.status = "PAID";
                 order.payment.captured = true;
                 order.payment.razorpayPaymentId = rzpPaymentId;
                 order.status = "Confirmed";
-                order.expiresAt = null; // ✅ stop expiry cleanup
+                order.expiresAt = null;
                 await order.save();
-
                 await Cart.updateOne(
                     { userId: order.user },
                     { $set: { items: [], totalPrice: 0 } }
@@ -139,29 +147,32 @@ export const handleWebhook = async (req, res) => {
     }
 };
 
-
 export const razorpayCallback = async (req, res) => {
+    const frontend =
+        process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://orcasportsclub.in";
+
     try {
         const body = new URLSearchParams(req.body.toString());
         const razorpayOrderId = body.get("razorpay_order_id");
 
         if (!razorpayOrderId) {
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+            return res.redirect(`${frontend}/payment-failed`);
         }
 
-        const order = await Order.findOne({ "payment.razorpayOrderId": razorpayOrderId });
+        const order = await Order.findOne({
+            "payment.razorpayOrderId": razorpayOrderId,
+        });
 
         if (!order) {
-            return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+            return res.redirect(`${frontend}/payment-failed`);
         }
 
-        if (order.payment.status === "PAID") {
-            return res.redirect(`${process.env.FRONTEND_URL}/order/success/${order._id}`);
+        if (order.payment?.status === "PAID") {
+            return res.redirect(`${frontend}/order/success/${order._id}`);
         }
 
-        return res.redirect(`${process.env.FRONTEND_URL}/payment-pending/${order._id}`);
+        return res.redirect(`${frontend}/payment-pending/${order._id}`);
     } catch (err) {
-        return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
+        return res.redirect(`${frontend}/payment-failed`);
     }
 };
-

@@ -13,11 +13,8 @@ router.post(
 );
 router.post(
   "/payments/razorpay/webhook",
-  raw({ type: "application/json" }), // ✅ only JSON
+  raw({ type: "application/json" }),
   handleWebhook
 );
-
-
-
 
 export default router;

@@ -18,6 +18,7 @@ import memberExerciseRoutes from './routes/memberExerciseRoutes.js';
 import memberChallengeRoutes from './routes/memberChallengeRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
 import { startOrderCleanupJob } from './helper/orderCleanup.js';
+import fs from 'fs';
 
 
 dotenv.config();
@@ -41,8 +42,16 @@ app.use(
   })
 );
 
-// Serve static React build
-app.use(express.static(path.join(__dirname, "client/build")));
+const distPath = path.join(__dirname, "..", "client", "dist");
+
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+} else {
+  console.warn("⚠️ Frontend dist not found at:", distPath);
+}
 
 // Routes
 app.use("/api/user", userRoutes);
@@ -56,22 +65,13 @@ app.use("/api/gym-owner", gymOwnerRoutes);
 app.use("/api/fitness/exercises", exerciseRoutes);
 app.use("/api/fitness/challenges", challengeRoutes);
 
-
 startOrderCleanupJob();
-
-// React SPA fallback
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "client/build", "index.html"));
-});
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
-
 });
 
-// Connect to DB
 dbConnect();
-
 await ensureSuperAdminExists();
 
