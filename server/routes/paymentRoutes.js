@@ -12,10 +12,11 @@ router.post(
     razorpayCallback
 );
 router.post(
-    "/payments/razorpay/webhook",
-    raw({ type: "*/*" }),
-    handleWebhook
+  "/payments/razorpay/webhook",
+  raw({ type: "application/json" }), // ✅ only JSON
+  handleWebhook
 );
+
 
 
 

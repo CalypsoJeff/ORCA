@@ -15,21 +15,21 @@ const paymentSchema = new Schema(
             index: true,
         },
 
-        method: { type: String }, // "card", "upi", "netbanking", "wallet", "cod"
+        method: { type: String },
         email: { type: String },
         contact: { type: String },
         captured: { type: Boolean, default: false },
         refunds: [
             {
-                amount: Number,                 // INR
+                amount: Number,
                 reason: String,
                 razorpayRefundId: String,
                 createdAt: { type: Date, default: Date.now },
             },
         ],
 
-        notes: { type: Object },            // gateway/internal notes
-        raw: { type: Object },              // last payload snapshot (optional)
+        notes: { type: Object },
+        raw: { type: Object },
     },
     { _id: false }
 );
@@ -38,8 +38,8 @@ const productLineSchema = new Schema(
     {
         product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
         quantity: { type: Number, required: true, min: 1 },
-        price: { type: Number, required: true, min: 0 }, // unit price (INR)
-        total: { type: Number, default: 0 },             // computed: quantity * price
+        price: { type: Number, required: true, min: 0 },
+        total: { type: Number, default: 0 },
         size: { type: String },
         color: { type: String },
         returnStatus: {
@@ -55,7 +55,6 @@ const orderSchema = new Schema(
     {
         user: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
         address: { type: Schema.Types.ObjectId, ref: "Address", required: true },
-
         products: {
             type: [productLineSchema],
             validate: (v) => Array.isArray(v) && v.length > 0,
@@ -63,6 +62,7 @@ const orderSchema = new Schema(
         status: {
             type: String,
             enum: [
+                "PendingPayment",
                 "Pending",
                 "Confirmed",
                 "Out for Delivery",
@@ -73,31 +73,25 @@ const orderSchema = new Schema(
                 "Return Accepted",
                 "Return Rejected",
             ],
-            default: "Pending",
+            default: "PendingPayment",
             index: true,
         },
-
         subTotal: { type: Number, default: 0 },
         taxTotal: { type: Number, default: 0 },
         discountTotal: { type: Number, default: 0 },
         grandTotal: { type: Number, default: 0 },
         currency: { type: String, default: "INR" },
-
-        // Payment
         payment: { type: paymentSchema, default: () => ({}) },
-
-        paymentMethod: { type: String, default: "razorpay" }, 
-        payment_id: { type: String },                         
+        paymentMethod: { type: String, default: "razorpay" },
+        payment_id: { type: String },
         payment_status: { type: Boolean, default: false },
-
         orderDate: { type: Date, default: Date.now },
         cancelRequest: { type: Boolean, default: false },
         reason: { type: String },
         response: { type: Boolean },
-
+        expiresAt: { type: Date, index: true },
         shippedDate: { type: Date, default: null },
         deliveredDate: { type: Date, default: null },
-
         coupon: { type: String },
         notes: { type: Object },
     },

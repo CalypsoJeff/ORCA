@@ -85,11 +85,46 @@ const CheckoutPage = () => {
         name: "ORCA E-Commerce",
         description: "Order payment",
 
-        // ✅ REQUIRED FOR v2 (IMPORTANT)
-        callback_url: `${
-          import.meta.env.VITE_API_BASE_URL
-        }/api/payments/razorpay/callback`,
-        redirect: true,
+        // USE handler (SPA-friendly). Remove callback_url + redirect.
+        handler: async function (response) {
+          try {
+            // response contains razorpay_payment_id, razorpay_order_id, razorpay_signature
+            const verifyPayload = {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            };
+
+            // Call backend verify endpoint which uses HMAC to confirm payment
+            const { data } = await authInstanceAxios.post(
+              "/api/payments/razorpay/verify",
+              verifyPayload
+            );
+
+            if (data?.status === "success") {
+              // navigate to success page
+              navigate(`/order/success/${data.orderId}`);
+            } else {
+              toast.error(
+                "Payment verification failed. Please contact support."
+              );
+              navigate(`/payment-failed`);
+            }
+          } catch (err) {
+            console.error("Payment verify error:", err);
+            toast.error("Verification failed. Please contact support.");
+            navigate(`/payment-failed`);
+          }
+        },
+
+        // nice UX: if user closes modal
+        modal: {
+          ondismiss: () => {
+            toast.info("Payment cancelled.");
+            // Optional: call backend to mark order cancelled immediately if you have such endpoint:
+            // authInstanceAxios.post("/api/payments/razorpay/cancel", { orderId: payload.orderId });
+          },
+        },
 
         prefill: {
           name: user?.name || "",

@@ -14,10 +14,11 @@ export const createOrderFromCart = async (req, res) => {
         if (!addressId) return res.status(400).json({ error: "Missing addressId" });
 
         const cart = await Cart.findOne({ userId }).lean();
-        if (!cart || !cart.items?.length)
+        if (!cart || !cart.items?.length) {
             return res.status(400).json({ error: "Cart empty" });
+        }
 
-        const products = cart.items.map(i => ({
+        const products = cart.items.map((i) => ({
             product: i.productId,
             quantity: Number(i.quantity),
             price: Number(i.price),
@@ -29,6 +30,7 @@ export const createOrderFromCart = async (req, res) => {
         const subTotal = products.reduce((s, it) => s + it.total, 0);
         const grandTotalRounded = Math.round(subTotal * 100) / 100;
 
+        // ✅ Create order as "PendingPayment" and set expiry (15 mins)
         const order = await Order.create({
             user: userId,
             address: addressId,
@@ -38,12 +40,15 @@ export const createOrderFromCart = async (req, res) => {
             discountTotal: 0,
             grandTotal: grandTotalRounded,
             currency: "INR",
-            status: "Pending", // valid enum
-            payment: {
-                status: "PENDING", // payment lifecycle
-                gateway: "razorpay",
-            },
 
+            status: "PendingPayment", // ✅ NEW status (add this to your enum)
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000), // ✅ add field in schema
+
+            payment: {
+                status: "PENDING",
+                gateway: "razorpay",
+                notes: { userId: String(userId) },
+            },
         });
 
         const finalPaise = Math.round(order.grandTotal * 100);
@@ -59,9 +64,6 @@ export const createOrderFromCart = async (req, res) => {
         order.payment.status = "PENDING";
         order.payment.receipt = rzpOrder.receipt;
         await order.save();
-
-        console.log("LIVE KEY:", process.env.RAZORPAY_KEY_ID);
-        console.log("RZP ORDER:", rzpOrder.id);
 
         return res.json({
             key: process.env.RAZORPAY_KEY_ID,
@@ -102,28 +104,44 @@ export const verifyPayment = async (req, res) => {
 export const handleWebhook = async (req, res) => {
     try {
         const signature = req.headers["x-razorpay-signature"];
-        const verified = verifyWebhookSignature(req.body, signature);
+        const rawBody = req.body; // ✅ Buffer
+
+        const verified = verifyWebhookSignature(rawBody, signature);
         if (!verified) return res.status(400).send("Bad signature");
-        const payload = JSON.parse(req.body.toString());
-        if (payload.event === "order.paid") {
-            const rzpOrderId = payload.payload.order.entity.id;
+
+        const payload = JSON.parse(rawBody.toString("utf8"));
+
+        // ✅ Prefer payment.captured
+        if (payload.event === "payment.captured") {
+            const payment = payload.payload.payment.entity;
+            const rzpOrderId = payment.order_id;
+            const rzpPaymentId = payment.id;
+
             const order = await Order.findOne({ "payment.razorpayOrderId": rzpOrderId });
             if (order && order.payment.status !== "PAID") {
                 order.payment.status = "PAID";
-                if (order.status === "Pending") order.status = "Confirmed";
+                order.payment.captured = true;
+                order.payment.razorpayPaymentId = rzpPaymentId;
+                order.status = "Confirmed";
+                order.expiresAt = null; // ✅ stop expiry cleanup
                 await order.save();
+
+                await Cart.updateOne(
+                    { userId: order.user },
+                    { $set: { items: [], totalPrice: 0 } }
+                );
             }
         }
+
         return res.json({ ok: true });
     } catch (err) {
         return res.status(500).send(err.message);
     }
 };
 
-// Razorpay v2 redirect callback (UX only, not source of truth)
+
 export const razorpayCallback = async (req, res) => {
     try {
-        // Razorpay sends x-www-form-urlencoded
         const body = new URLSearchParams(req.body.toString());
         const razorpayOrderId = body.get("razorpay_order_id");
 
@@ -131,22 +149,19 @@ export const razorpayCallback = async (req, res) => {
             return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
         }
 
-        const order = await Order.findOne({
-            "payment.razorpayOrderId": razorpayOrderId,
-        });
+        const order = await Order.findOne({ "payment.razorpayOrderId": razorpayOrderId });
 
         if (!order) {
             return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
         }
 
-        // ⚠️ Do NOT mark PAID here
-        // Webhook (payment.captured / order.paid) is the source of truth
+        if (order.payment.status === "PAID") {
+            return res.redirect(`${process.env.FRONTEND_URL}/order/success/${order._id}`);
+        }
 
-        return res.redirect(
-            `${process.env.FRONTEND_URL}/order/success/${order._id}`
-        );
+        return res.redirect(`${process.env.FRONTEND_URL}/payment-pending/${order._id}`);
     } catch (err) {
-        console.error("Razorpay callback error:", err);
         return res.redirect(`${process.env.FRONTEND_URL}/payment-failed`);
     }
 };
+

@@ -6,7 +6,7 @@ import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import paymentRoutes from "./routes/paymentRoutes.js";
-import { dbConnect } from './config/DB.js'; 
+import { dbConnect } from './config/DB.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -17,6 +17,7 @@ import challengeRoutes from './routes/challengeRoutes.js';
 import memberExerciseRoutes from './routes/memberExerciseRoutes.js';
 import memberChallengeRoutes from './routes/memberChallengeRoutes.js';
 import { ensureSuperAdminExists } from './controllers/adminController.js';
+import { startOrderCleanupJob } from './helper/orderCleanup.js';
 
 
 dotenv.config();
@@ -25,7 +26,7 @@ const PORT = process.env.PORT || 3030;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 app.use(cors({
-  origin: ["http://localhost:5173", "https://orca-dusky.vercel.app","https://orcasportsclub.in","https://www.orcasportsclub.in"],
+  origin: ["http://localhost:5173", "https://orca-dusky.vercel.app", "https://orcasportsclub.in", "https://www.orcasportsclub.in"],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
 }));
@@ -55,6 +56,8 @@ app.use("/api/gym-owner", gymOwnerRoutes);
 app.use("/api/fitness/exercises", exerciseRoutes);
 app.use("/api/fitness/challenges", challengeRoutes);
 
+
+startOrderCleanupJob();
 
 // React SPA fallback
 app.get("*", (req, res) => {
