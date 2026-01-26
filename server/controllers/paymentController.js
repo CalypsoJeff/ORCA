@@ -148,31 +148,68 @@ export const handleWebhook = async (req, res) => {
 };
 
 export const razorpayCallback = async (req, res) => {
-    const frontend =
-        process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://orcasportsclub.in";
+  const frontend =
+    process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://orcasportsclub.in";
 
-    try {
-        const body = new URLSearchParams(req.body.toString());
-        const razorpayOrderId = body.get("razorpay_order_id");
+  // 🔍 Debug (remove after confirmed)
+  console.log("🔔 RAZORPAY CALLBACK HIT");
+  console.log("CONTENT-TYPE:", req.headers["content-type"]);
+  console.log("REQ.BODY:", req.body);
 
-        if (!razorpayOrderId) {
-            return res.redirect(`${frontend}/payment-failed`);
-        }
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
 
-        const order = await Order.findOne({
-            "payment.razorpayOrderId": razorpayOrderId,
-        });
-
-        if (!order) {
-            return res.redirect(`${frontend}/payment-failed`);
-        }
-
-        if (order.payment?.status === "PAID") {
-            return res.redirect(`${frontend}/order/success/${order._id}`);
-        }
-
-        return res.redirect(`${frontend}/payment-pending/${order._id}`);
-    } catch (err) {
-        return res.redirect(`${frontend}/payment-failed`);
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      console.error("❌ Missing Razorpay fields");
+      return res.redirect(`${frontend}/payment-failed`);
     }
+
+    // ✅ Verify signature immediately (don’t wait for webhook)
+    const ok = verifyCheckoutSignature({
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    });
+
+    if (!ok) {
+      console.error("❌ Razorpay signature verification failed");
+      return res.redirect(`${frontend}/payment-failed`);
+    }
+
+    const order = await Order.findOne({
+      "payment.razorpayOrderId": razorpay_order_id,
+    });
+
+    if (!order) {
+      console.error("❌ Order not found for order_id:", razorpay_order_id);
+      return res.redirect(`${frontend}/payment-failed`);
+    }
+
+    // ✅ Mark order paid
+    if (order.payment.status !== "PAID") {
+      order.payment.status = "PAID";
+      order.payment.razorpayPaymentId = razorpay_payment_id;
+      order.payment.razorpaySignature = razorpay_signature;
+      order.payment.captured = true;
+      order.status = "Confirmed";
+      order.expiresAt = null;
+
+      await order.save();
+
+      await Cart.updateOne(
+        { userId: order.user },
+        { $set: { items: [], totalPrice: 0 } }
+      );
+    }
+
+    // ✅ SUCCESS REDIRECT
+    return res.redirect(`${frontend}/order/success/${order._id}`);
+  } catch (err) {
+    console.error("🔥 razorpayCallback error:", err);
+    return res.redirect(`${frontend}/payment-failed`);
+  }
 };

@@ -5,11 +5,11 @@ import { createOrderFromCart, handleWebhook, razorpayCallback, verifyPayment } f
 
 const router = Router();
 
-router.post("/payments/razorpay/create-order", createOrderFromCart);
+router.post("/payments/razorpay/create-order", isLogin, createOrderFromCart);
 router.post("/payments/razorpay/verify", verifyPayment);
 router.post(
-    "/payments/razorpay/callback",
-    razorpayCallback
+  "/payments/razorpay/callback",
+  razorpayCallback
 );
 router.post(
   "/payments/razorpay/webhook",
