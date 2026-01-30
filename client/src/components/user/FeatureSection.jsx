@@ -141,6 +141,7 @@ const featureBlocks = [
   },
 ];
 
+// eslint-disable-next-line react/prop-types
 const FeatureSection = ({ variant = "light" }) => {
   // variant: "dark" or "light" if you want a white background version later
   const isDark = variant === "dark";

@@ -7,17 +7,14 @@ import {
   MDBCol,
   MDBCard,
   MDBCardBody,
-  MDBCardText,
   MDBInput,
-  MDBBtn,
-  MDBBadge,
   MDBSpinner,
 } from "mdb-react-ui-kit";
 
 import NavBar from "../../components/user/NavBar";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 import UserSidebar from "../../components/user/UserSidebar";
-import api from "../../api/middlewares/interceptor"; // <-- your central axios instance
+import api from "../../api/middlewares/interceptor";
 
 const STATUS_OPTIONS = [
   { label: "All", value: "ALL" },
@@ -29,68 +26,125 @@ const STATUS_OPTIONS = [
   { label: "Cancelled", value: "Cancelled" },
 ];
 
-const statusBadgeColor = (s) => {
-  switch (s) {
-    case "Pending":
-      return "warning";
-    case "Confirmed":
-      return "info";
-    case "Out for Delivery":
-      return "info";
-    case "Shipped":
-      return "primary";
-    case "Delivered":
-      return "success";
-    case "Cancelled":
-      return "danger";
-    default:
-      return "secondary";
-  }
+const statusConfig = {
+  Pending: { color: "bg-yellow-100 text-yellow-800", icon: "⏳" },
+  Confirmed: { color: "bg-blue-100 text-blue-800", icon: "✓" },
+  "Out for Delivery": { color: "bg-purple-100 text-purple-800", icon: "🚚" },
+  Shipped: { color: "bg-indigo-100 text-indigo-800", icon: "📦" },
+  Delivered: { color: "bg-green-100 text-green-800", icon: "✅" },
+  Cancelled: { color: "bg-red-100 text-red-800", icon: "✕" },
 };
-const formatINR = (n) => `₹${Number(n || 0).toFixed(2)}`;
 
-// Mobile card for an order
+const paymentStatusConfig = {
+  PAID: { color: "bg-green-100 text-green-700", text: "Paid" },
+  FAILED: { color: "bg-red-100 text-red-700", text: "Failed" },
+  PENDING: { color: "bg-yellow-100 text-yellow-700", text: "Pending" },
+};
+
+const formatINR = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
+const formatDate = (date) =>
+  new Date(date).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+// Mobile Order Card
 function OrderCard({ order }) {
+  const statusInfo = statusConfig[order.status] || statusConfig.Pending;
+  const paymentInfo =
+    paymentStatusConfig[order.payment?.status] || paymentStatusConfig.PENDING;
+
+  const totalItems = (order.products || []).reduce(
+    (s, p) => s + (p.quantity || 0),
+    0
+  );
+
   return (
-    <MDBCard className="mb-3 d-md-none">
-      <MDBCardBody>
-        <div className="d-flex justify-content-between align-items-start">
-          <div>
-            <div className="fw-bold">#{order._id}</div>
-            <div className="text-muted small">
-              {new Date(order.createdAt || order.orderDate).toLocaleDateString(
-                "en-IN",
-                {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                }
+    <div className="bg-white rounded-xl border-2 border-gray-200 p-4 mb-3 hover:border-blue-300 transition-all shadow-sm">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold text-gray-500">ORDER ID</span>
+          </div>
+          <p className="font-mono text-sm font-semibold text-gray-900 truncate">
+            #{order._id}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            📅 {formatDate(order.createdAt || order.orderDate)}
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-2 items-end">
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${statusInfo.color}`}
+          >
+            {statusInfo.icon} {order.status}
+          </span>
+          <span
+            className={`px-2 py-0.5 rounded text-xs font-medium ${paymentInfo.color}`}
+          >
+            {paymentInfo.text}
+          </span>
+        </div>
+      </div>
+
+      {/* Product Preview */}
+      {order.products && order.products.length > 0 && (
+        <div className="flex items-center gap-3 mb-3 p-2 bg-gray-50 rounded-lg">
+          <img
+            src={order.products[0].product?.images?.[0] || "/placeholder.jpg"}
+            alt={order.products[0].product?.name}
+            className="w-16 h-16 object-cover rounded-md border border-gray-200 flex-shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 line-clamp-1">
+              {order.products[0].product?.name}
+            </p>
+            <div className="flex items-center gap-2 mt-1 text-xs text-gray-600">
+              <span>Qty: {order.products[0].quantity}</span>
+              {order.products.length > 1 && (
+                <>
+                  <span>•</span>
+                  <span>+{order.products.length - 1} more</span>
+                </>
               )}
             </div>
           </div>
-          <MDBBadge color={statusBadgeColor(order.status)} className="ms-2">
-            {order.status}
-          </MDBBadge>
         </div>
+      )}
 
-        <div className="mt-2">
-          <MDBCardText className="mb-1">
-            <span className="text-muted">Items:</span>{" "}
-            {(order.products || []).reduce((s, p) => s + (p.quantity || 0), 0)}
-          </MDBCardText>
-          <MDBCardText className="mb-1">
-            <span className="text-muted">Total:</span>{" "}
+      {/* Details Grid */}
+      <div className="grid grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-200">
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Total Items</p>
+          <p className="font-semibold text-gray-900">{totalItems}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+          <p className="font-semibold text-gray-900 text-sm">
+            {order.payment?.gateway === "razorpay" ? "Online" : "COD"}
+          </p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-gray-500">Order Total</p>
+          <p className="text-lg font-bold text-gray-900">
             {formatINR(order.grandTotal)}
-          </MDBCardText>
+          </p>
         </div>
-
-        <div className="d-flex justify-content-end mt-2">
-          <Link to={`/account/orders/${order._id}`}>
-            <MDBBtn size="sm">View</MDBBtn>
-          </Link>
-        </div>
-      </MDBCardBody>
-    </MDBCard>
+        <Link
+          to={`/account/orders/${order._id}`}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors no-underline"
+        >
+          View Details
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -102,13 +156,12 @@ export default function UserOrders() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
 
-  // server-side pagination
   const [page, setPage] = useState(1);
   const pageSize = 8;
 
-  // fetch from server whenever page/status changes
   useEffect(() => {
     let abort = false;
+
     const fetchOrders = async () => {
       setLoading(true);
       try {
@@ -118,7 +171,7 @@ export default function UserOrders() {
           ...(status !== "ALL" ? { status } : {}),
         };
         const { data } = await api.get("/api/orders", { params });
-        // data: { items, page, limit, total, hasMore }
+
         if (!abort) {
           setOrders(data.items || []);
           setServerTotal(data.total || 0);
@@ -127,40 +180,30 @@ export default function UserOrders() {
         if (!abort) {
           setOrders([]);
           setServerTotal(0);
-          console.error(
-            "Failed to load orders:",
-            e?.response?.data || e.message
-          );
+          console.error("Failed to load orders:", e?.response?.data || e.message);
         }
       } finally {
         if (!abort) setLoading(false);
       }
     };
+
     fetchOrders();
     return () => {
       abort = true;
     };
   }, [page, status]);
 
-  // client-side filter for quick search (by id/date)
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return orders;
+
     return (orders || []).filter((o) => {
       const idMatch = String(o._id).toLowerCase().includes(q);
-      const dateStr = new Date(o.createdAt || o.orderDate)
-        .toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-        .toLowerCase();
-      const dateMatch = dateStr.includes(q);
-      return idMatch || dateMatch;
+      const dateStr = formatDate(o.createdAt || o.orderDate).toLowerCase();
+      return idMatch || dateStr.includes(q);
     });
   }, [orders, query]);
 
-  // when filters change that affect server fetch, reset page to 1
   useEffect(() => {
     setPage(1);
   }, [status]);
@@ -175,212 +218,273 @@ export default function UserOrders() {
   );
   const currentPage = Math.min(page, totalPages);
 
-  // if user is searching, paginate the filtered current page (client-only)
   const pageSlice = useMemo(() => {
     if (query) {
       const start = (currentPage - 1) * pageSize;
       return filtered.slice(start, start + pageSize);
     }
-    return filtered; // when not searching, filtered === current server page
-  }, [filtered, currentPage]);
+    return filtered;
+  }, [filtered, currentPage, query]);
 
   return (
     <>
       <NavBar />
       <PageBreadcrumbs />
-      <section style={{ backgroundColor: "#eee", marginTop: "100px" }}>
-        <MDBContainer className="py-10">
+
+      {/* ✅ FIX: remove marginTop and use padding-top */}
+      <section className="bg-gray-50 min-h-screen pt-28 md:pt-32 pb-10">
+        <MDBContainer className="py-3 py-md-4">
           <MDBRow>
-            {/* LEFT: Sidebar */}
+            {/* Sidebar */}
             <MDBCol lg="3" className="mb-4">
               <UserSidebar />
             </MDBCol>
 
-            {/* RIGHT: Orders */}
+            {/* Main Content */}
             <MDBCol lg="9">
-              {/* Header + Filters */}
-              <MDBRow className="gy-3 align-items-end">
-                <MDBCol xs="12" md="6">
-                  <h4 className="mb-0">My Orders</h4>
-                  <div className="text-muted small">
-                    Track, manage and view your purchases
+              <MDBCard className="border-0 shadow-sm">
+                <MDBCardBody className="p-4">
+                  {/* Header */}
+                  <div className="mb-4 pb-4 border-b border-gray-200">
+                    <h4 className="text-2xl font-bold text-blue-600 mb-2">
+                      My Orders
+                    </h4>
+                    <p className="text-gray-600 text-sm mb-0">
+                      Track, manage and view your purchases
+                    </p>
                   </div>
-                </MDBCol>
 
-                <MDBCol xs="12" md="3">
-                  <MDBInput
-                    label="Search by Order ID / Date"
-                    value={query}
-                    onChange={(e) => {
-                      setQuery(e.target.value);
-                      setPage(1);
-                    }}
-                  />
-                </MDBCol>
+                  {/* Filters */}
+                  <div className="flex flex-col md:flex-row gap-3 mb-4">
+                    <div className="flex-1">
+                      <label className="text-xs text-gray-600 mb-1 block">
+                        Search by Order ID or Date
+                      </label>
+                      <MDBInput
+                        value={query}
+                        onChange={(e) => {
+                          setQuery(e.target.value);
+                          setPage(1);
+                        }}
+                        className="bg-white"
+                      />
+                    </div>
 
-                <MDBCol xs="12" md="3">
-                  <div className="form-group">
-                    <label className="form-label small text-muted mb-1">
-                      Status
-                    </label>
-                    <select
-                      className="form-select"
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                    >
-                      {STATUS_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="w-full md:w-56">
+                      <label className="text-xs text-gray-600 mb-1 block">
+                        Order Status
+                      </label>
+                      <select
+                        className="form-select w-full"
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                      >
+                        {STATUS_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </MDBCol>
-              </MDBRow>
 
-              {/* Content */}
-              <MDBRow className="mt-3">
-                <MDBCol xs="12">
+                  {/* Content */}
                   {loading ? (
-                    <div className="d-flex justify-content-center py-5">
-                      <MDBSpinner role="status">
+                    <div className="flex justify-center items-center py-20">
+                      <MDBSpinner role="status" color="primary">
                         <span className="visually-hidden">Loading...</span>
                       </MDBSpinner>
                     </div>
                   ) : pageSlice.length === 0 ? (
-                    <MDBCard className="mt-3">
-                      <MDBCardBody className="text-center">
-                        <div className="fw-semibold mb-1">No orders found</div>
-                        <MDBCardText className="text-muted">
-                          Try clearing filters or search with a different term.
-                        </MDBCardText>
-                      </MDBCardBody>
-                    </MDBCard>
+                    <div className="text-center py-16">
+                      <div className="mb-4">
+                        <svg
+                          className="w-20 h-20 mx-auto text-gray-300"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                      </div>
+                      <h5 className="text-gray-600 font-semibold mb-2">
+                        No orders found
+                      </h5>
+                      <p className="text-gray-500 text-sm">
+                        {query || status !== "ALL"
+                          ? "Try adjusting your filters"
+                          : "You haven't placed any orders yet"}
+                      </p>
+                    </div>
                   ) : (
                     <>
-                      {/* Desktop/Tablet TABLE */}
-                      <div className="d-none d-md-block">
-                        <MDBCard className="mt-2">
-                          <MDBCardBody className="p-0">
-                            <div className="table-responsive">
-                              <table className="table mb-0 align-middle">
-                                <thead className="table-light">
-                                  <tr>
-                                    <th style={{ width: 260 }}>Order ID</th>
-                                    <th>Date</th>
-                                    <th>Items</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th
-                                      className="text-end"
-                                      style={{ width: 140 }}
+                      {/* Desktop Table */}
+                      <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-100 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Order ID
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Date
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Items
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Total
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Payment
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">
+                                Status
+                              </th>
+                              <th className="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase">
+                                Action
+                              </th>
+                            </tr>
+                          </thead>
+
+                          <tbody className="divide-y divide-gray-200">
+                            {pageSlice.map((o) => {
+                              const statusInfo =
+                                statusConfig[o.status] || statusConfig.Pending;
+                              const paymentInfo =
+                                paymentStatusConfig[o.payment?.status] ||
+                                paymentStatusConfig.PENDING;
+
+                              const totalItems = (o.products || []).reduce(
+                                (s, p) => s + (p.quantity || 0),
+                                0
+                              );
+
+                              return (
+                                <tr
+                                  key={o._id}
+                                  className="hover:bg-gray-50 transition-colors"
+                                >
+                                  <td className="px-4 py-3">
+                                    <span className="font-mono text-sm font-semibold text-gray-900">
+                                      #{o._id.slice(-8)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {formatDate(o.createdAt || o.orderDate)}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                      {o.products && o.products.length > 0 && (
+                                        <img
+                                          src={
+                                            o.products[0].product?.images?.[0] ||
+                                            "/placeholder.jpg"
+                                          }
+                                          alt=""
+                                          className="w-10 h-10 object-cover rounded border border-gray-200"
+                                        />
+                                      )}
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {totalItems}{" "}
+                                        {totalItems === 1 ? "item" : "items"}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 font-semibold text-gray-900">
+                                    {formatINR(o.grandTotal)}
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span
+                                      className={`px-2 py-1 rounded text-xs font-medium ${paymentInfo.color}`}
                                     >
-                                      Actions
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {pageSlice.map((o) => (
-                                    <tr key={o._id}>
-                                      <td className="fw-semibold">#{o._id}</td>
-                                      <td>
-                                        {new Date(
-                                          o.createdAt || o.orderDate
-                                        ).toLocaleDateString("en-IN", {
-                                          day: "2-digit",
-                                          month: "short",
-                                          year: "numeric",
-                                        })}
-                                      </td>
-                                      <td>
-                                        {(o.products || []).reduce(
-                                          (s, p) => s + (p.quantity || 0),
-                                          0
-                                        )}
-                                      </td>
-                                      <td>{formatINR(o.grandTotal)}</td>
-                                      <td>
-                                        <MDBBadge
-                                          color={statusBadgeColor(o.status)}
-                                        >
-                                          {o.status}
-                                        </MDBBadge>
-                                      </td>
-                                      <td className="text-end">
-                                        <Link to={`/account/orders/${o._id}`}>
-                                          <MDBBtn size="sm">View</MDBBtn>
-                                        </Link>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </MDBCardBody>
-                        </MDBCard>
+                                      {paymentInfo.text}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span
+                                      className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}
+                                    >
+                                      {statusInfo.icon} {o.status}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-right">
+                                    <Link
+                                      to={`/account/orders/${o._id}`}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors no-underline inline-block"
+                                    >
+                                      View
+                                    </Link>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
 
-                      {/* Mobile CARDS */}
-                      <div className="d-md-none">
+                      {/* Mobile Cards */}
+                      <div className="md:hidden">
                         {pageSlice.map((o) => (
                           <OrderCard key={o._id} order={o} />
                         ))}
                       </div>
 
                       {/* Pagination */}
-                      <div className="d-flex justify-content-between align-items-center mt-3">
-                        <div className="text-muted small">
+                      <div className="flex flex-col sm:flex-row justify-between items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+                        <div className="text-sm text-gray-600">
                           {query ? (
-                            <>
+                            <span>
                               Showing{" "}
-                              <strong>
-                                {(currentPage - 1) * pageSize + 1}
-                              </strong>{" "}
+                              <strong>{(currentPage - 1) * pageSize + 1}</strong>{" "}
                               -{" "}
                               <strong>
-                                {Math.min(
-                                  currentPage * pageSize,
-                                  filtered.length
-                                )}
+                                {Math.min(currentPage * pageSize, filtered.length)}
                               </strong>{" "}
                               of <strong>{filtered.length}</strong>
-                            </>
+                            </span>
                           ) : (
-                            <>
+                            <span>
                               Page <strong>{currentPage}</strong> of{" "}
-                              <strong>{totalPages}</strong> • Total orders:{" "}
+                              <strong>{totalPages}</strong> • Total:{" "}
                               <strong>{serverTotal}</strong>
-                            </>
+                            </span>
                           )}
                         </div>
-                        <div className="d-flex align-items-center gap-2">
-                          <MDBBtn
-                            size="sm"
-                            color="light"
-                            disabled={currentPage <= 1}
+
+                        <div className="flex items-center gap-2">
+                          <button
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage <= 1}
+                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
-                            Prev
-                          </MDBBtn>
-                          <span className="small">
-                            Page <strong>{currentPage}</strong> / {totalPages}
+                            Previous
+                          </button>
+
+                          <span className="px-3 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold">
+                            {currentPage} / {totalPages}
                           </span>
-                          <MDBBtn
-                            size="sm"
-                            color="light"
-                            disabled={currentPage >= totalPages}
+
+                          <button
                             onClick={() =>
                               setPage((p) => Math.min(totalPages, p + 1))
                             }
+                            disabled={currentPage >= totalPages}
+                            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             Next
-                          </MDBBtn>
+                          </button>
                         </div>
                       </div>
                     </>
                   )}
-                </MDBCol>
-              </MDBRow>
+                </MDBCardBody>
+              </MDBCard>
             </MDBCol>
           </MDBRow>
         </MDBContainer>

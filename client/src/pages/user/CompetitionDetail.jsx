@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
@@ -7,40 +7,42 @@ import {
 } from "../../api/endpoints/competitions/user-competition";
 import NavBar from "../../components/user/NavBar";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
-import {
-  MDBCard,
-  MDBCardImage,
-  MDBCardBody,
-  MDBCardTitle,
-  MDBContainer,
-  MDBRow,
-  MDBCol,
-  MDBBtn,
-} from "mdb-react-ui-kit";
+
+import { selectUser } from "../../features/auth/authSlice";
+
 import {
   Calendar,
   MapPin,
   Clock,
   Tag,
-  User,
-  DollarSign,
   Users,
   Info,
   X,
   Check,
   Mail,
   Phone,
+  User as UserIcon,
+  DollarSign,
 } from "lucide-react";
-import { selectUser } from "../../features/auth/authSlice";
 
 const CompetitionDetail = () => {
   const { id } = useParams();
-  const [competition, setCompetition] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
   const userId = useSelector(selectUser)?._id;
-  //  Form state
+
+  const [competition, setCompetition] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // ✅ Hide sticky action bar when in-page actions are visible
+  const actionsRef = useRef(null);
+  const [showStickyBar, setShowStickyBar] = useState(true);
+
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -50,10 +52,6 @@ const CompetitionDetail = () => {
     agreeToTerms: false,
   });
 
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-
-  const [errors, setErrors] = useState({});
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
@@ -62,6 +60,23 @@ const CompetitionDetail = () => {
     }));
   }, [id, userId]);
 
+  useEffect(() => {
+    const getCompetitionDetails = async () => {
+      setLoading(true);
+      try {
+        const response = await fetchCompetitionDetails(id);
+        setCompetition(response?.data?.competition || null);
+      } catch (error) {
+        console.error("Error fetching competition details:", error);
+        setCompetition(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    getCompetitionDetails();
+  }, [id]);
+
+  // Reset modal form when opened
   useEffect(() => {
     if (isModalOpen) {
       setFormData({
@@ -77,74 +92,102 @@ const CompetitionDetail = () => {
     }
   }, [isModalOpen, userId, id]);
 
+  // Lock body scroll when modal open
   useEffect(() => {
-    const getCompetitionDetails = async () => {
-      try {
-        const response = await fetchCompetitionDetails(id);
-        setCompetition(response.data.competition);
-      } catch (error) {
-        console.error("Error fetching competition details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getCompetitionDetails();
-  }, [id]);
+    document.body.style.overflow = isModalOpen ? "hidden" : "auto";
+    return () => (document.body.style.overflow = "auto");
+  }, [isModalOpen]);
 
-  if (loading) {
-    return <div className="text-center mt-5">Loading...</div>;
-  }
+  // ✅ IntersectionObserver: hide sticky bar when in-page actions are visible
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el) return;
 
-  if (!competition) {
-    return <div className="text-center mt-5">Competition not found.</div>;
-  }
+    const obs = new IntersectionObserver(
+      ([entry]) => setShowStickyBar(!entry.isIntersecting),
+      { threshold: 0.15 }
+    );
 
-  // Convert time to 12-hour format
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loading, competition]);
+
   const convertTo12Hour = (time) => {
     if (!time) return "N/A";
-    const [hours, minutes] = time.split(":");
+    const [h, m] = String(time).split(":");
+    const hours = Number(h);
     const suffix = hours >= 12 ? "PM" : "AM";
-    const formattedHours = (hours % 12 || 12).toString();
-    return `${formattedHours}:${minutes} ${suffix}`;
+    const formatted = (hours % 12 || 12).toString();
+    return `${formatted}:${m} ${suffix}`;
   };
+
+  const formattedDate = useMemo(() => {
+    if (!competition?.date) return "TBA";
+    const dt = new Date(competition.date);
+    if (isNaN(dt.getTime())) return "TBA";
+    return dt.toLocaleDateString("en-IN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }, [competition]);
+
+  const categoryLabel = useMemo(() => {
+    const c = competition?.category;
+    if (!c) return "N/A";
+    if (Array.isArray(c)) return c.join(", ");
+    return String(c);
+  }, [competition]);
+
+  const typeLabel = useMemo(() => {
+    const t = competition?.type;
+    if (!t) return "N/A";
+    if (Array.isArray(t)) return t.join(", ");
+    return String(t);
+  }, [competition]);
+
+  const locationLabel = useMemo(() => {
+    const place = competition?.place || "N/A";
+    const st = competition?.state;
+    const stLabel = Array.isArray(st) ? st.join(", ") : st ? String(st) : "";
+    return stLabel ? `${place}, ${stLabel}` : place;
+  }, [competition]);
+
+  const canRegister = useMemo(() => {
+    if (!competition) return false;
+    return String(competition.status || "").toLowerCase() === "active";
+  }, [competition]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
-    });
+    }));
 
     if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      });
+      setErrors((prev) => ({ ...prev, [name]: null }));
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
+    if (!formData.name.trim()) newErrors.name = "Name is required";
 
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = "Email is invalid";
-    }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
-    } else if (!/^\d{10}$/.test(formData.phone.replace(/[^0-9]/g, ""))) {
+    const onlyDigits = formData.phone.replace(/[^0-9]/g, "");
+    if (!formData.phone.trim()) newErrors.phone = "Phone number is required";
+    else if (!/^\d{10}$/.test(onlyDigits))
       newErrors.phone = "Phone number must be 10 digits";
-    }
 
-    if (!formData.agreeToTerms) {
+    if (!formData.agreeToTerms)
       newErrors.agreeToTerms = "You must agree to the terms and conditions";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -152,10 +195,8 @@ const CompetitionDetail = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (!validateForm()) {
-      return;
-    }
     setSubmitting(true);
     try {
       const submissionData = {
@@ -163,14 +204,13 @@ const CompetitionDetail = () => {
         userId: userId,
         competitionId: id,
       };
-      console.log("Submitting Registration:", submissionData);
-      const response = await registerCompetition(submissionData);
-      console.log("Server Response:", response.data);
+
+      await registerCompetition(submissionData);
+
       setSuccess(true);
-      // Redirect to Payment Confirmation Page
       setTimeout(() => {
         navigate(`/competition/${id}/payment-confirmation`);
-      }, 2000);
+      }, 1200);
     } catch (error) {
       console.error("Error registering for competition:", error);
       setErrors({ submit: "Failed to register. Please try again." });
@@ -179,163 +219,312 @@ const CompetitionDetail = () => {
     }
   };
 
-  // Close modal when clicking outside
   const handleModalBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !submitting) {
-      setIsModalOpen(false);
-    }
+    if (e.target === e.currentTarget && !submitting) setIsModalOpen(false);
   };
 
   if (loading) {
-    return <div className="text-center mt-5">Loading...</div>;
+    return (
+      <>
+        <NavBar />
+        <PageBreadcrumbs />
+        <div className="min-h-screen bg-gray-50 pt-28 flex items-center justify-center px-4">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="h-12 w-12 border-4 border-t-sky-600 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mb-4" />
+            <p className="text-lg text-gray-600">Loading competition...</p>
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (!competition) {
-    return <div className="text-center mt-5">Competition not found.</div>;
+    return (
+      <>
+        <NavBar />
+        <PageBreadcrumbs />
+        <div className="min-h-screen bg-gray-50 pt-28 flex items-center justify-center px-4">
+          <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-md w-full text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Competition not found
+            </h2>
+            <p className="text-gray-600 mb-4">
+              The competition you’re looking for could not be loaded.
+            </p>
+            <Link
+              to="/competitions"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-sky-600 text-white hover:bg-sky-700 no-underline"
+            >
+              Back to Competitions
+            </Link>
+          </div>
+        </div>
+      </>
+    );
   }
-
-  // Format date properly
-  const formattedDate = competition.date
-    ? new Date(competition.date).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-    : "N/A";
 
   return (
     <>
       <NavBar />
-      <MDBContainer className="py-5 mt-24">
-        <PageBreadcrumbs />
+      <PageBreadcrumbs />
 
-        <MDBRow className="mt-4">
-          {/* Competition Image */}
-          <MDBCol lg="6">
-            <MDBCard className="shadow-lg border-0 h-">
-              <MDBCardImage
-                src={competition.image[0]}
-                alt={competition.name}
-                position="top"
-                className="w-100 rounded"
-              />
-            </MDBCard>
-          </MDBCol>
+      {/* ✅ similar to ProductDetails */}
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 sm:px-6 pt-28 pb-8">
+          <div className="bg-white rounded-xl shadow-md overflow-hidden max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:h-[calc(100vh-160px)]">
+              {/* LEFT: sticky image column */}
+              <div className="md:border-r border-gray-200">
+                <div className="md:sticky md:top-28 p-6 space-y-4">
+                  <div className="relative rounded-lg overflow-hidden bg-gray-100 h-[320px] sm:h-[420px]">
+                    <img
+                      src={competition?.image?.[0] || "/placeholder.jpg"}
+                      alt={competition?.name || "Competition"}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
 
-          {/* Competition Details */}
-          <MDBCol lg="6">
-            <MDBCard className="shadow-lg p-4 border-0">
-              <MDBCardBody>
-                <MDBCardTitle className="text-primary text-center text-uppercase">
-                  {competition.name}
-                </MDBCardTitle>
+                    {/* Status pill */}
+                    <div className="absolute top-3 left-3">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          String(competition.status).toLowerCase() === "active"
+                            ? "bg-green-600 text-white"
+                            : "bg-red-600 text-white"
+                        }`}
+                      >
+                        {competition.status}
+                      </span>
+                    </div>
+                  </div>
 
-                <div className="mt-3 space-y-3">
-                  <p className="text-lg flex items-center">
-                    <Tag className="mr-2 text-sky-500" />{" "}
-                    <strong>Category:</strong>{" "}
-                    <span className="ml-2">
-                      {competition.category.join(", ") || "N/A"}
-                    </span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <Calendar className="mr-2 text-green-500" />{" "}
-                    <strong>Date:</strong>{" "}
-                    <span className="ml-2">{formattedDate}</span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <Clock className="mr-2 text-orange-500" />{" "}
-                    <strong>Time:</strong>{" "}
-                    <span className="ml-2">
-                      {convertTo12Hour(competition.time)}
-                    </span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <MapPin className="mr-2 text-red-500" />{" "}
-                    <strong>Location:</strong>{" "}
-                    <span className="ml-2">
-                      {competition.place}, {competition.state.join(", ")}
-                    </span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <Info className="mr-2 text-gray-500" />{" "}
-                    <strong>Type:</strong>{" "}
-                    <span className="ml-2">
-                      {competition.type.join(", ") || "N/A"}
-                    </span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <DollarSign className="mr-2 text-yellow-500" />{" "}
-                    <strong>Cost:</strong>{" "}
-                    <span className="ml-2">₹{competition.cost || 0}</span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <Users className="mr-2 text-purple-500" />{" "}
-                    <strong>Max Registrations:</strong>{" "}
-                    <span className="ml-2">
-                      {competition.maxRegistrations || "N/A"}
-                    </span>
-                  </p>
-                  <p className="text-lg flex items-center">
-                    <Info className="mr-2 text-blue-500" />{" "}
-                    <strong>Status:</strong>{" "}
-                    <span
-                      className={`ml-2 ${
-                        competition.status === "active"
-                          ? "text-success"
-                          : "text-danger"
-                      }`}
+                  {/* Quick chips */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Date
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 mt-1 line-clamp-2">
+                        {formattedDate}
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Time
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 mt-1">
+                        {convertTo12Hour(competition.time)}
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        Location
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 mt-1 line-clamp-2">
+                        {locationLabel}
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <DollarSign className="w-4 h-4" />
+                        Cost
+                      </div>
+                      <div className="text-sm font-semibold text-gray-900 mt-1">
+                        ₹{Number(competition.cost || 0).toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Desktop actions */}
+                  <div className="hidden md:flex gap-3 pt-2">
+                    <Link
+                      to="/competitions"
+                      className="flex-1 text-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 no-underline"
                     >
-                      {competition.status}
-                    </span>
-                  </p>
-                  <p className="text-lg">
-                    <strong>Description:</strong>{" "}
-                    <span>
-                      {competition.description || "No description available."}
+                      Back
+                    </Link>
+
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      disabled={!canRegister}
+                      className="flex-1 px-4 py-2 rounded-md bg-sky-600 text-white font-semibold hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
+                    >
+                      Register
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT: scroll column (desktop) */}
+              <div
+                className="p-6 md:overflow-y-auto md:h-full
+                           md:[scrollbar-width:none] md:[-ms-overflow-style:none]
+                           md:[&::-webkit-scrollbar]:hidden"
+              >
+                {/* Title */}
+                <div className="mb-5">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                    {competition.name}
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1">
+                    <span className="inline-flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      {categoryLabel}
                     </span>
                   </p>
                 </div>
 
-                <div className="d-flex justify-content-center mt-4 gap-3">
-                  <Link to="/competitions">
-                    <MDBBtn color="secondary">Back</MDBBtn>
-                  </Link>
-                  <MDBBtn color="primary" onClick={() => setIsModalOpen(true)}>
-                    Register Now
-                  </MDBBtn>
+                {/* Info cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+                  <div className="border border-gray-200 rounded-xl p-4 bg-white">
+                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                      <Info className="w-4 h-4" />
+                      Type
+                    </div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {typeLabel}
+                    </div>
+                  </div>
+
+                  <div className="border border-gray-200 rounded-xl p-4 bg-white">
+                    <div className="text-xs text-gray-500 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Max registrations
+                    </div>
+                    <div className="mt-1 font-semibold text-gray-900">
+                      {competition.maxRegistrations || "N/A"}
+                    </div>
+                  </div>
                 </div>
-              </MDBCardBody>
-            </MDBCard>
-          </MDBCol>
-        </MDBRow>
-      </MDBContainer>
-      {/* Registration Modal */}
+
+                {/* Description */}
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-6">
+                  <h2 className="font-semibold text-lg mb-2">Description</h2>
+                  <p className="text-gray-700 leading-relaxed mb-0">
+                    {competition.description || "No description available."}
+                  </p>
+                </div>
+
+                {/* Registration / payment info (optional UX section) */}
+                <div className="border border-gray-200 rounded-xl p-4 bg-white mb-6">
+                  <h2 className="font-semibold text-lg mb-2">
+                    Registration details
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                      <span className="text-gray-600">Status</span>
+                      <span className="font-semibold text-gray-900">
+                        {competition.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                      <span className="text-gray-600">Cost</span>
+                      <span className="font-semibold text-gray-900">
+                        ₹{Number(competition.cost || 0).toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ✅ In-page actions (observer target) */}
+                <div
+                  ref={actionsRef}
+                  className="mt-auto pt-4 border-t border-gray-200"
+                >
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Link
+                      to="/competitions"
+                      className="flex-1 text-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 no-underline"
+                    >
+                      Back to Competitions
+                    </Link>
+
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      disabled={!canRegister}
+                      className="flex-1 px-4 py-2 rounded-md bg-sky-600 text-white font-semibold hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      type="button"
+                    >
+                      Register Now
+                    </button>
+                  </div>
+                </div>
+
+                {/* spacing for mobile sticky bar */}
+                <div className="h-20 md:hidden" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ STICKY ACTION BAR (mobile only) */}
+        {showStickyBar && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 md:hidden">
+            <div className="container mx-auto px-4 sm:px-6 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-500 truncate">
+                    {competition.name}
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    ₹{Number(competition.cost || 0).toLocaleString("en-IN")} •{" "}
+                    {convertTo12Hour(competition.time)}
+                  </div>
+                </div>
+
+                <Link
+                  to="/competitions"
+                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 no-underline"
+                >
+                  Back
+                </Link>
+
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  disabled={!canRegister}
+                  className="px-4 py-2 rounded-md bg-sky-600 text-white font-semibold text-sm hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                >
+                  Register
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ================= MODAL ================= */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4"
           onClick={handleModalBackdropClick}
         >
           <div
             className="bg-white rounded-xl shadow-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
+            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-xl font-bold text-gray-900">
                 Register for {competition.name}
               </h3>
               <button
                 onClick={() => !submitting && setIsModalOpen(false)}
-                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                className="text-gray-500 hover:text-gray-700"
                 disabled={submitting}
+                type="button"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6">
               {success ? (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
@@ -345,30 +534,26 @@ const CompetitionDetail = () => {
                   <h3 className="text-lg font-medium text-green-800 mb-2">
                     Registration Successful!
                   </h3>
-                  <p className="text-green-700 mb-4">
+                  <p className="text-green-700 mb-1">
                     You have successfully registered for {competition.name}.
                   </p>
                   <p className="text-sm text-green-600">
-                    This window will close automatically...
+                    Redirecting to payment...
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Name Field */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Name */}
                   <div>
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Full Name
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User className="h-5 w-5 text-gray-400" />
+                        <UserIcon className="h-5 w-5 text-gray-400" />
                       </div>
                       <input
                         type="text"
-                        id="name"
                         name="name"
                         value={formData.name}
                         onChange={handleChange}
@@ -383,12 +568,9 @@ const CompetitionDetail = () => {
                     )}
                   </div>
 
-                  {/* Email Field */}
+                  {/* Email */}
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Email Address
                     </label>
                     <div className="relative">
@@ -397,7 +579,6 @@ const CompetitionDetail = () => {
                       </div>
                       <input
                         type="email"
-                        id="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
@@ -408,18 +589,13 @@ const CompetitionDetail = () => {
                       />
                     </div>
                     {errors.email && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.email}
-                      </p>
+                      <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                     )}
                   </div>
 
-                  {/* Phone Field */}
+                  {/* Phone */}
                   <div>
-                    <label
-                      htmlFor="phone"
-                      className="block text-sm font-medium text-gray-700 mb-1"
-                    >
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Phone Number
                     </label>
                     <div className="relative">
@@ -428,7 +604,6 @@ const CompetitionDetail = () => {
                       </div>
                       <input
                         type="tel"
-                        id="phone"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
@@ -439,13 +614,10 @@ const CompetitionDetail = () => {
                       />
                     </div>
                     {errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.phone}
-                      </p>
+                      <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
                     )}
                   </div>
 
-                  {/* Hidden Fields */}
                   <input type="hidden" name="userId" value={formData.userId} />
                   <input
                     type="hidden"
@@ -453,7 +625,7 @@ const CompetitionDetail = () => {
                     value={formData.competitionId}
                   />
 
-                  {/* Terms and Conditions */}
+                  {/* Terms */}
                   <div className="flex items-start">
                     <div className="flex items-center h-5">
                       <input
@@ -472,19 +644,13 @@ const CompetitionDetail = () => {
                       >
                         I agree to the terms and conditions
                       </label>
-                      <p className="text-gray-500">
+                      <p className="text-gray-500 mb-0">
                         By registering, you agree to our{" "}
-                        <a
-                          href="/terms"
-                          className="text-sky-600 hover:text-sky-800"
-                        >
+                        <a href="/terms" className="text-sky-600 hover:text-sky-800">
                           Terms of Service
                         </a>{" "}
                         and{" "}
-                        <a
-                          href="/privacy"
-                          className="text-sky-600 hover:text-sky-800"
-                        >
+                        <a href="/privacy" className="text-sky-600 hover:text-sky-800">
                           Privacy Policy
                         </a>
                         .
@@ -497,55 +663,29 @@ const CompetitionDetail = () => {
                     </div>
                   </div>
 
-                  {/* Submit Error */}
                   {errors.submit && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
                       {errors.submit}
                     </div>
                   )}
 
-                  {/* Submit Button */}
-                  <div className="flex justify-end gap-3">
+                  {/* Buttons */}
+                  <div className="flex justify-end gap-3 pt-2">
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
                       disabled={submitting}
-                      className="py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
                       Cancel
                     </button>
+
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="py-2 px-4 rounded-md text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 disabled:opacity-50"
                     >
-                      {submitting ? (
-                        <>
-                          <svg
-                            className="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline-block"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
-                          </svg>
-                          Processing...
-                        </>
-                      ) : (
-                        "Register"
-                      )}
+                      {submitting ? "Processing..." : "Register"}
                     </button>
                   </div>
                 </form>

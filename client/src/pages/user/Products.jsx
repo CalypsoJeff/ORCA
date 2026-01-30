@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
-
 import NavBar from "../../components/user/NavBar";
 import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 import { loadShopProducts } from "../../api/endpoints/products/user-products";
 
-import {
-  addToCartLocally,
-  addToCartAsync,
-} from "../../features/ecommerce/cartSlice";
+import { addToCartLocally, addToCartAsync } from "../../features/ecommerce/cartSlice";
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -25,6 +21,9 @@ function Products() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minDiscount, setMinDiscount] = useState(0);
+
+  // ✅ Mobile filters drawer
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -94,8 +93,7 @@ function Products() {
     return Math.round(p / (1 - d / 100));
   };
 
-  const hasVariants = (product) =>
-    Array.isArray(product?.sizes) && product.sizes.length > 0;
+  const hasVariants = (product) => Array.isArray(product?.sizes) && product.sizes.length > 0;
 
   // Quick-add allowed only if we can auto-pick first size/color safely
   const canQuickAdd = (product) => {
@@ -167,17 +165,13 @@ function Products() {
 
     return (products || [])
       .filter((p) => {
-        const nameOk = (p?.name || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        const nameOk = (p?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
 
         const catLabel = getCategoryLabel(p?.category);
-        const catOk =
-          selectedCategories.size === 0 || selectedCategories.has(catLabel);
+        const catOk = selectedCategories.size === 0 || selectedCategories.has(catLabel);
 
         const price = Number(p?.price || 0);
-        const priceOk =
-          (minP === null || price >= minP) && (maxP === null || price <= maxP);
+        const priceOk = (minP === null || price >= minP) && (maxP === null || price <= maxP);
 
         const discount = Number(p?.discount || 0);
         const discountOk = discount >= Number(minDiscount || 0);
@@ -195,15 +189,15 @@ function Products() {
         if (sortBy === "discount") return bd - ad;
         return 0;
       });
-  }, [
-    products,
-    searchTerm,
-    selectedCategories,
-    minPrice,
-    maxPrice,
-    minDiscount,
-    sortBy,
-  ]);
+  }, [products, searchTerm, selectedCategories, minPrice, maxPrice, minDiscount, sortBy]);
+
+  // Lock body scroll when mobile drawer open
+  useEffect(() => {
+    document.body.style.overflow = mobileFiltersOpen ? "hidden" : "auto";
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [mobileFiltersOpen]);
 
   if (loading) {
     return (
@@ -294,10 +288,27 @@ function Products() {
           </div>
         </div>
 
+        {/* ✅ Mobile Filters Button Row */}
+        <div className="flex lg:hidden items-center gap-2 mb-4">
+          <button
+            onClick={() => setMobileFiltersOpen(true)}
+            className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50"
+          >
+            Filters
+          </button>
+
+          <button
+            onClick={clearFilters}
+            className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm hover:bg-gray-50"
+          >
+            Clear
+          </button>
+        </div>
+
         {/* Sidebar + Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Sidebar */}
-          <aside className="lg:col-span-3">
+          {/* ✅ Desktop Sidebar */}
+          <aside className="hidden lg:block lg:col-span-3">
             <div className="bg-white border border-gray-200 rounded-lg p-4 lg:sticky lg:top-28">
               <h2 className="text-base font-semibold mb-4">Filters</h2>
 
@@ -376,31 +387,18 @@ function Products() {
                 No products found.
               </div>
             ) : (
-              <div
-                className="
-                  grid gap-4
-                  grid-cols-2
-                  md:grid-cols-3
-                  lg:grid-cols-4
-                "
-              >
+              <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {filteredProducts.map((product) => {
                   const discount = Number(product?.discount || 0);
                   const mrp = calcMrp(product?.price, discount);
-
-                  // If it has variants, better UX to open details to pick size/color
                   const showSelectOptions = hasVariants(product);
 
                   return (
                     <Link
                       key={product._id}
                       to={`/product/${product._id}`}
-                      className="
-                        group bg-white border border-gray-200 rounded-lg overflow-hidden
-                        hover:shadow-md transition-shadow relative
-                        no-underline
-                      "
-                      style={{ textDecoration: "none" }} // extra safety
+                      className="group bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow relative no-underline"
+                      style={{ textDecoration: "none" }}
                     >
                       {/* Image */}
                       <div className="relative bg-gray-100 h-44 sm:h-52">
@@ -442,10 +440,7 @@ function Products() {
                           {getCategoryLabel(product.category)}
                         </div>
 
-                        <h2
-                          className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[2.5rem]"
-                          style={{ textDecoration: "none" }}
-                        >
+                        <h2 className="text-sm font-medium text-gray-900 line-clamp-2 min-h-[2.5rem]">
                           {product.name}
                         </h2>
 
@@ -461,10 +456,7 @@ function Products() {
                           )}
                         </div>
 
-                        <div
-                          className="mt-2 text-xs text-blue-600 font-medium"
-                          style={{ textDecoration: "none" }}
-                        >
+                        <div className="mt-2 text-xs text-blue-600 font-medium">
                           View details
                         </div>
                       </div>
@@ -476,6 +468,115 @@ function Products() {
           </main>
         </div>
       </div>
+
+      {/* ✅ Mobile Filters Drawer */}
+      {mobileFiltersOpen && (
+        <div className="fixed inset-0 z-[9999] lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+
+          <div className="absolute right-0 top-0 h-full w-[90%] max-w-sm bg-white shadow-2xl flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="text-base font-semibold">Filters</h3>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="w-9 h-9 rounded-md border border-gray-200 hover:bg-gray-50"
+                aria-label="Close filters"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto flex-1">
+              {/* Category */}
+              <div className="mb-5">
+                <div className="font-medium text-sm mb-2">Category</div>
+                <div className="max-h-56 overflow-auto pr-1 space-y-2">
+                  {categories.length === 0 ? (
+                    <div className="text-sm text-gray-500">No categories</div>
+                  ) : (
+                    categories.map((cat) => (
+                      <label key={cat} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedCategories.has(cat)}
+                          onChange={() => toggleCategory(cat)}
+                          className="h-4 w-4"
+                        />
+                        <span className="text-gray-700">{cat}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div className="mb-5">
+                <div className="font-medium text-sm mb-2">Price Range</div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Min"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="Max"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Discount */}
+              <div className="mb-1">
+                <div className="font-medium text-sm mb-2">Discount</div>
+                <div className="space-y-2">
+                  {[0, 10, 20, 30, 40, 50].map((d) => (
+                    <label key={d} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="discount-mobile"
+                        checked={Number(minDiscount) === d}
+                        onChange={() => setMinDiscount(d)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-gray-700">
+                        {d === 0 ? "All" : `${d}% or more`}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex gap-2">
+              <button
+                onClick={() => {
+                  clearFilters();
+                  setMobileFiltersOpen(false);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-sm font-medium"
+              >
+                Clear
+              </button>
+              <button
+                onClick={() => setMobileFiltersOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

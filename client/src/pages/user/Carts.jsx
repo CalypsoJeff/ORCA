@@ -2,12 +2,7 @@ import { useState, useEffect } from "react";
 import { loadCart } from "../../api/endpoints/products/user-products";
 import NavBar from "../../components/user/NavBar";
 import { InteractiveCheckout } from "../../components/ui/interactive-checkout";
-import {
-  MDBContainer,
-  MDBBreadcrumb,
-  MDBBreadcrumbItem,
-} from "mdb-react-ui-kit";
-import { Link } from "react-router-dom";
+import PageBreadcrumbs from "../../components/user/PageBreadcrumbs";
 
 const InteractiveCheckoutPage = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -36,36 +31,22 @@ const InteractiveCheckoutPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <NavBar />
+      <PageBreadcrumbs />
 
-      {/* 🔹 Breadcrumbs */}
-      <MDBContainer className="mt-28 mb-4">
-        <MDBBreadcrumb>
-          <MDBBreadcrumbItem>
-            <Link to="/home" className="text-decoration-none text-sky-600">
-              Home
-            </Link>
-          </MDBBreadcrumbItem>
-          <MDBBreadcrumbItem>
-            <Link to="/shop" className="text-decoration-none text-sky-600">
-              Shop
-            </Link>
-          </MDBBreadcrumbItem>
-          <MDBBreadcrumbItem active>Cart</MDBBreadcrumbItem>
-        </MDBBreadcrumb>
-      </MDBContainer>
+      {/* ✅ Push content below fixed NavBar + PageBreadcrumbs */}
+      <div className="pt-36 sm:pt-40 px-3 sm:px-6">
+        <h2 className="text-center text-2xl sm:text-4xl text-black font-bold mb-6">
+          Your Cart
+        </h2>
 
-      {/* 🔹 Page Heading */}
-      <h2 className="text-center text-4xl text-black font-bold mb-6">
-        Your Cart
-      </h2>
-
-      {loading ? (
-        <div className="flex justify-center py-10">
-          <div className="text-gray-500">Loading cart...</div>
-        </div>
-      ) : (
-        <InteractiveCheckout products={cartItems} />
-      )}
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <div className="text-gray-500">Loading cart...</div>
+          </div>
+        ) : (
+          <InteractiveCheckout products={cartItems} />
+        )}
+      </div>
     </div>
   );
 };

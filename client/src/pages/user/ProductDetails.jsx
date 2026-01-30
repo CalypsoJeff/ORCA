@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "flowbite-react";
 import NavBar from "../../components/user/NavBar";
@@ -11,10 +11,7 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import { useDispatch } from "react-redux";
-import {
-  addToCartLocally,
-  addToCartAsync,
-} from "../../features/ecommerce/cartSlice";
+import { addToCartLocally, addToCartAsync } from "../../features/ecommerce/cartSlice";
 
 const ProductDetails = () => {
   const { id } = useParams();
@@ -30,8 +27,24 @@ const ProductDetails = () => {
   const [availableColors, setAvailableColors] = useState([]);
   const [currentStock, setCurrentStock] = useState(0);
 
+  // ✅ Hide sticky bar when in-page buttons are visible
+  const actionsRef = useRef(null);
+  const [showStickyBar, setShowStickyBar] = useState(true);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const calculateDiscountedPrice = (price, discount) => {
+    const p = Number(price || 0);
+    const d = Number(discount || 0);
+    if (!d) return p;
+    return Math.round(p - (p * d) / 100);
+  };
+
+  const discountedPrice = calculateDiscountedPrice(
+    product?.price,
+    product?.discount
+  );
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -61,7 +74,6 @@ const ProductDetails = () => {
     }
   };
 
-  // Buy Now: add item then go to checkout
   const handleBuyNow = async () => {
     if (!product) return;
 
@@ -105,9 +117,11 @@ const ProductDetails = () => {
           if (productData.sizes[0]?.colors?.length > 0) {
             setSelectedColor(productData.sizes[0].colors[0].color);
             setCurrentStock(productData.sizes[0].colors[0].stock);
+          } else {
+            setSelectedColor(null);
+            setCurrentStock(0);
           }
         } else {
-          // if no variants, optionally set stock from product.stock if available
           setCurrentStock(productData?.stock ?? 999999);
         }
       } catch (err) {
@@ -170,12 +184,25 @@ const ProductDetails = () => {
     }
   };
 
-  const calculateDiscountedPrice = (price, discount) => {
-    const p = Number(price || 0);
-    const d = Number(discount || 0);
-    if (!d) return p;
-    return Math.round(p - (p * d) / 100);
-  };
+  // ✅ IntersectionObserver: hide sticky bar when in-page actions are visible
+  useEffect(() => {
+    const el = actionsRef.current;
+    if (!el) return;
+
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        // if actions are visible in viewport => hide sticky
+        setShowStickyBar(!entry.isIntersecting);
+      },
+      {
+        root: null, // viewport
+        threshold: 0.15,
+      }
+    );
+
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loading, product]);
 
   if (loading) {
     return (
@@ -215,21 +242,14 @@ const ProductDetails = () => {
     );
   }
 
-  const discountedPrice = calculateDiscountedPrice(
-    product?.price,
-    product?.discount
-  );
-
   return (
     <>
       <NavBar />
       <PageBreadcrumbs />
 
-      {/* Make the page area a fixed viewport height so right can scroll */}
+      {/* ✅ Outer page should NOT scroll; inner right section scrolls */}
       <div className="container mx-auto px-4 sm:px-6 mt-28 mb-8">
         <div className="bg-white rounded-xl shadow-md overflow-hidden max-w-7xl mx-auto">
-          {/* height: viewport minus navbar+breadcrumbs area.
-              adjust 160px if your header area differs */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:h-[calc(100vh-160px)]">
             {/* LEFT: sticky image column */}
             <div className="md:border-r border-gray-200">
@@ -237,8 +257,7 @@ const ProductDetails = () => {
                 <div className="relative rounded-lg overflow-hidden bg-gray-100 h-[320px] sm:h-[420px]">
                   <img
                     src={
-                      product?.images?.[activeImageIndex] ||
-                      "/fallback-image.jpg"
+                      product?.images?.[activeImageIndex] || "/fallback-image.jpg"
                     }
                     alt={product?.name || "Product image"}
                     className="w-full h-full object-contain p-2"
@@ -280,9 +299,7 @@ const ProductDetails = () => {
                       >
                         <img
                           src={image || "/placeholder.svg"}
-                          alt={`${product?.name || "Product"} - view ${
-                            index + 1
-                          }`}
+                          alt={`${product?.name || "Product"} - view ${index + 1}`}
                           className="w-full h-full object-contain p-2"
                         />
                       </button>
@@ -292,7 +309,12 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            <div className="p-6 md:overflow-y-auto scrollbar-hide">
+            {/* RIGHT: ✅ ONLY this scrolls on desktop, scrollbar hidden */}
+            <div
+              className="p-6 md:overflow-y-auto md:h-full
+                         md:[scrollbar-width:none] md:[-ms-overflow-style:none]
+                         md:[&::-webkit-scrollbar]:hidden"
+            >
               <div className="mb-6">
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 pt-4">
                   {product?.name}
@@ -418,8 +440,8 @@ const ProductDetails = () => {
                 </div>
               </div>
 
-              {/* Cart */}
-              <div className="mt-auto pt-4 border-t border-gray-200">
+              {/* ✅ In-page actions (observer target) */}
+              <div ref={actionsRef} className="mt-auto pt-4 border-t border-gray-200">
                 <div className="flex items-center mb-4">
                   <span className="mr-4 font-medium">Quantity:</span>
                   <div className="flex items-center border rounded-md">
@@ -460,11 +482,57 @@ const ProductDetails = () => {
                   </Button>
                 </div>
               </div>
+
               <div className="h-6" />
+              {/* give space so sticky bar doesn't cover last content on mobile */}
+              <div className="h-24 md:hidden" />
             </div>
           </div>
         </div>
       </div>
+
+      {/* ✅ STICKY BUY BAR:
+          - Mobile: shows summary + buttons
+          - Desktop: only buttons (summary hidden)
+          - Auto-hide when in-page actions are visible
+      */}
+      {showStickyBar && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200">
+          <div className="container mx-auto px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-3 md:justify-end">
+              {/* Left summary (HIDE ON LAPTOP/DESKTOP) */}
+              <div className="flex-1 min-w-0 md:hidden">
+                <div className="text-xs text-gray-500 truncate">{product?.name}</div>
+                <div className="text-lg font-bold text-sky-600">₹{discountedPrice}</div>
+                {product?.sizes?.length > 0 && (
+                  <div className="text-[11px] text-gray-500">
+                    {selectedSize ? `Size: ${selectedSize}` : "Select size"}
+                    {availableColors?.length > 0 && selectedColor
+                      ? ` • Color: ${selectedColor}`
+                      : ""}
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={handleAddToCart}
+                disabled={currentStock === 0}
+                className="px-4 py-2 rounded-md bg-sky-600 text-white font-semibold text-sm hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
+
+              <button
+                onClick={handleBuyNow}
+                disabled={currentStock === 0}
+                className="px-4 py-2 rounded-md border border-sky-600 text-sky-600 font-semibold text-sm hover:bg-sky-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Buy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

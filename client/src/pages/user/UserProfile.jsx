@@ -1,3 +1,4 @@
+/* ========================= UserProfile.jsx ========================= */
 /* eslint-disable no-unused-vars */
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -28,101 +29,11 @@ const UserProfile = () => {
     addresses: user?.addresses || [],
   });
 
-  const [newAddress, setNewAddress] = useState({
-    street: "",
-    city: "",
-    state: "",
-    country: "",
-    postalCode: "",
-    isDefault: false,
-  });
-
   const [editing, setEditing] = useState(false);
-  const [editingAddressIndex, setEditingAddressIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
-  };
-
-  const handleNewAddressChange = (e) => {
-    setNewAddress({
-      ...newAddress,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleEditAddress = (index) => {
-    setEditingAddressIndex(index);
-    setNewAddress({ ...profileData.addresses[index] });
-  };
-
-  const handleAddAddress = () => {
-    if (
-      !newAddress.street ||
-      !newAddress.city ||
-      !newAddress.state ||
-      !newAddress.country
-    ) {
-      alert("Please fill in all required address fields");
-      return;
-    }
-
-    // If this is the first address, mark it as default
-    const nextAddress = { ...newAddress };
-    if (profileData.addresses.length === 0) {
-      nextAddress.isDefault = true;
-    }
-
-    if (editingAddressIndex >= 0) {
-      const updatedAddresses = [...profileData.addresses];
-      updatedAddresses[editingAddressIndex] = nextAddress;
-
-      setProfileData({
-        ...profileData,
-        addresses: updatedAddresses,
-      });
-      setEditingAddressIndex(-1);
-    } else {
-      setProfileData({
-        ...profileData,
-        addresses: [...profileData.addresses, nextAddress],
-      });
-    }
-
-    setNewAddress({
-      street: "",
-      city: "",
-      state: "",
-      country: "",
-      postalCode: "",
-      isDefault: false,
-    });
-  };
-
-  const handleRemoveAddress = (index) => {
-    const updatedAddresses = [...profileData.addresses];
-    const removedAddress = updatedAddresses.splice(index, 1)[0];
-
-    if (removedAddress?.isDefault && updatedAddresses.length > 0) {
-      updatedAddresses[0].isDefault = true;
-    }
-
-    setProfileData({
-      ...profileData,
-      addresses: updatedAddresses,
-    });
-  };
-
-  const handleSetDefaultAddress = (index) => {
-    const updatedAddresses = [...profileData.addresses];
-    updatedAddresses.forEach((addr) => (addr.isDefault = false));
-    updatedAddresses[index].isDefault = true;
-
-    setProfileData({
-      ...profileData,
-      addresses: updatedAddresses,
-    });
   };
 
   const handleSave = async () => {
@@ -151,15 +62,6 @@ const UserProfile = () => {
       phone: user?.phone || "",
       addresses: user?.addresses || [],
     });
-    setNewAddress({
-      street: "",
-      city: "",
-      state: "",
-      country: "",
-      postalCode: "",
-      isDefault: false,
-    });
-    setEditingAddressIndex(-1);
   };
 
   return (
@@ -167,17 +69,13 @@ const UserProfile = () => {
       <NavBar />
       <PageBreadcrumbs />
 
-      <section style={{ backgroundColor: "#eee", marginTop: "100px" }}>
-        <MDBContainer className="py-5">
-          <MDBRow>
-            {/* LEFT: Sidebar */}
-            <MDBCol lg="3" className="mb-4">
-              <UserSidebar />
-            </MDBCol>
-
-            {/* RIGHT: Profile content (ONLY details section) */}
-            <MDBCol lg="9">
-              {/* Header row with Edit button */}
+      {/* ✅ push content below fixed NavBar + PageBreadcrumbs
+          ✅ extra bottom padding on mobile for fixed bottom account bar */}
+      <section className="bg-[#eee] pt-36 sm:pt-40 pb-24 lg:pb-6">
+        <MDBContainer>
+          <MDBRow className="g-4">
+            {/* ✅ Profile content first on mobile */}
+            <MDBCol lg="9" className="order-1 order-lg-2">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <h5 className="mb-0">Profile Details</h5>
                 <MDBBtn outline onClick={() => setEditing((v) => !v)}>
@@ -274,6 +172,12 @@ const UserProfile = () => {
                   )}
                 </MDBCardBody>
               </MDBCard>
+            </MDBCol>
+
+            {/* ✅ Sidebar second on mobile (fixed bottom bar + drawer), first on desktop */}
+            <MDBCol lg="3" className="order-2 order-lg-1">
+              {/* ✅ collapsed by default => drawer closed on mobile */}
+              <UserSidebar collapsed />
             </MDBCol>
           </MDBRow>
         </MDBContainer>

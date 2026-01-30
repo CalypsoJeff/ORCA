@@ -1,4 +1,4 @@
-import Header from "../../components/user/Header";
+import Header from "../../components/user/NavBar";
 import Landing from "../../components/user/Landing";
 import Products from "../../components/user/Products";
 

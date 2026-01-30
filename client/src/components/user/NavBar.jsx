@@ -61,7 +61,9 @@ const NavBar = () => {
       <header
         className={cn(
           "fixed top-0 left-0 right-0 z-50 px-4 md:px-10 py-3 transition-all duration-300",
-          scrolled ? "bg-black/80 backdrop-blur-md shadow-md" : "bg-transparent"
+          scrolled
+            ? "bg-black/80 backdrop-blur-md shadow-md"
+            : "bg-transparent",
         )}
       >
         <div className="container mx-auto flex items-center justify-between">
@@ -84,7 +86,7 @@ const NavBar = () => {
                   "flex items-center gap-2 text-sm font-medium transition-colors no-underline",
                   isLandingPage
                     ? "text-white hover:text-sky-300"
-                    : "text-black hover:text-sky-600"
+                    : "text-black hover:text-sky-600",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -100,14 +102,14 @@ const NavBar = () => {
               onClick={() => navigate("/cart")}
               className={cn(
                 "relative p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-500",
-                isLandingPage ? "hover:bg-white/10" : "hover:bg-sky-50"
+                isLandingPage ? "hover:bg-white/10" : "hover:bg-sky-50",
               )}
               aria-label="Go to cart"
             >
               <ShoppingCart
                 className={cn(
                   "h-6 w-6",
-                  isLandingPage ? "text-white" : "text-sky-600"
+                  isLandingPage ? "text-white" : "text-sky-600",
                 )}
               />
               {cartCount > 0 && (
@@ -123,7 +125,7 @@ const NavBar = () => {
                   to="/account/profile"
                   className={cn(
                     "flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-sky-500 no-underline",
-                    isLandingPage ? "text-white" : "text-black"
+                    isLandingPage ? "text-white" : "text-black",
                   )}
                   aria-label="Go to profile"
                 >
@@ -154,27 +156,26 @@ const NavBar = () => {
               aria-expanded={isMenuOpen}
               onClick={() => setIsMenuOpen((v) => !v)}
               className={cn(
-                "md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500",
-                isLandingPage ? "text-white" : "text-sky-600"
+                "md:hidden inline-flex flex-col items-center justify-center w-10 h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500 gap-1.5",
+                isLandingPage ? "text-white" : "text-sky-600",
               )}
             >
-              {/* animated bars */}
               <span
                 className={cn(
-                  "block origin-center transition-transform duration-200 w-6 h-0.5 bg-current",
-                  isMenuOpen ? "rotate-45 translate-y-0" : "-translate-y-2"
+                  "block transition-all duration-300 w-6 h-0.5 bg-current rounded-full",
+                  isMenuOpen ? "rotate-45 translate-y-2" : "",
                 )}
               />
               <span
                 className={cn(
-                  "block transition-opacity duration-200 w-6 h-0.5 bg-current my-1",
-                  isMenuOpen ? "opacity-0" : "opacity-100"
+                  "block transition-all duration-300 w-6 h-0.5 bg-current rounded-full",
+                  isMenuOpen ? "opacity-0" : "opacity-100",
                 )}
               />
               <span
                 className={cn(
-                  "block origin-center transition-transform duration-200 w-6 h-0.5 bg-current",
-                  isMenuOpen ? "-rotate-45 translate-y-0" : "translate-y-2"
+                  "block transition-all duration-300 w-6 h-0.5 bg-current rounded-full",
+                  isMenuOpen ? "-rotate-45 -translate-y-2" : "",
                 )}
               />
             </button>
@@ -182,85 +183,159 @@ const NavBar = () => {
         </div>
       </header>
 
-      {/* ================= MOBILE DRAWER (render only when open) ================= */}
+      {/* ================= MOBILE DRAWER ================= */}
       {isMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm md:hidden"
+          style={{ zIndex: 9999 }}
           onClick={() => setIsMenuOpen(false)}
         >
           <aside
-            className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl overflow-y-auto"
+            className="absolute right-0 top-0 h-full w-[280px] bg-white shadow-2xl overflow-y-auto animate-slide-in"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
           >
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-sky-600">Menu</h2>
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-sky-600 to-blue-600 text-white p-4 shadow-md z-10">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h2 className="text-lg font-bold">ORCA</h2>
+                  {user && (
+                    <p className="text-xs text-sky-100 mt-0.5">
+                      Hi, {user.name}
+                    </p>
+                  )}
+                </div>
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-2 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
                   aria-label="Close menu"
                 >
-                  ✕
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
                 </button>
               </div>
 
               {cartCount > 0 && (
-                <p className="mt-2 text-sm text-gray-600">
-                  🛒 Items in cart:{" "}
-                  <span className="font-semibold">{cartCount}</span>
-                </p>
+                <div className="px-3 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <div className="flex items-center gap-2 text-sm">
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>
+                      <span className="font-semibold">{cartCount}</span> item
+                      {cartCount !== 1 ? "s" : ""} in cart
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
 
-            <nav className="flex flex-col divide-y">
+            {/* Navigation Links */}
+            <nav className="py-2">
               {navItems.map(({ name, url, icon: Icon }) => (
                 <Link
                   key={name}
                   to={url}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100 text-base no-underline"
+                  className={cn(
+                    "flex items-center gap-3 px-6 py-3.5 hover:bg-sky-50 transition-colors no-underline border-l-4",
+                    path === url
+                      ? "bg-sky-50 border-sky-600"
+                      : "border-transparent hover:border-sky-300",
+                  )}
                 >
-                  <Icon className="h-5 w-5 text-sky-600" />
-                  <span>{name}</span>
+                  <Icon
+                    className={cn(
+                      "h-5 w-5",
+                      path === url ? "text-sky-600" : "text-gray-600",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "font-medium",
+                      path === url ? "text-sky-600" : "text-gray-700",
+                    )}
+                  >
+                    {name}
+                  </span>
                 </Link>
               ))}
-
-              <div className="px-6 py-4">
-                {user ? (
-                  <>
-                    <Link
-                      to="/account/profile"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="block px-3 py-3 rounded hover:bg-gray-100"
-                    >
-                      Profile
-                    </Link>
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        handleLogout();
-                      }}
-                      className="w-full text-left px-3 py-3 rounded text-red-600 hover:bg-red-50"
-                    >
-                      Logout
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    to="/login"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="block px-3 py-3 rounded text-sky-600 hover:bg-sky-50"
-                  >
-                    Login / Signup
-                  </Link>
-                )}
-              </div>
             </nav>
+
+            {/* Divider */}
+            <div className="mx-6 my-2 border-t border-gray-200"></div>
+
+            {/* User Actions */}
+            <div className="px-4 py-2 pb-20">
+              {user ? (
+                <>
+                  <Link
+                    to="/account/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors no-underline text-gray-700"
+                  >
+                    <UserCircle className="h-5 w-5 text-sky-600" />
+                    <span className="font-medium">My Profile</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors mt-1"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span className="font-medium">Logout</span>
+                  </button>
+                </>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors no-underline font-medium shadow-sm"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  Login / Signup
+                </Link>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-50 border-t border-gray-200">
+              <p className="text-xs text-gray-500 text-center">
+                &copy; {new Date().getFullYear()} ORCA
+              </p>
+            </div>
           </aside>
         </div>
       )}
+
+      <style>{`
+  @keyframes slide-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+`}</style>
     </>
   );
 };

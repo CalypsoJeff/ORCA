@@ -1,4 +1,4 @@
-import Header from "../../components/user/Header";
+import Header from "../../components/user/NavBar";
 
 const Fitness = () => {
   return (
