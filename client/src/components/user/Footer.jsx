@@ -2,232 +2,101 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="bg-gray-50 border-t border-gray-200 ">
-      <div className="container mx-auto px-6 py-12 md:py-20 no-underline">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
-          {/* Brand */}
-          <div className="md:col-span-1 ">
+    <footer className="bg-white text-gray-600">
+      <div className="container mx-auto px-6 py-12">
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
+          {/* Brand Section */}
+          <div>
             <Link
               to="/"
-              className="text-2xl font-display font-bold text-orca-800 tracking-tight inline-block mb-4"
+              className="text-3xl font-display font-bold text-gray-900 tracking-tight inline-block mb-3 no-underline hover:text-orca-600 transition-colors"
             >
               ORCA
             </Link>
-            <p className="text-gray-600 mb-6 max-w-xs">
+            <p className="text-gray-500 text-sm leading-relaxed max-w-xs">
               Simplicity is the ultimate sophistication in digital experiences.
             </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className="text-gray-900 font-semibold mb-4">Quick Links</h3>
+            <ul className="space-y-2">
+              {[
+                { name: "About", path: "/about" },
+                { name: "Contact", path: "/contact" },
+                { name: "FAQ", path: "/faq" },
+                { name: "Support", path: "/support" },
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    to={link.path}
+                    className="text-gray-600 hover:text-orca-600 transition-colors text-sm inline-flex items-center gap-2 group no-underline"
+                  >
+                    <span className="w-1 h-1 bg-orca-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal & Social */}
+          <div>
+            <h3 className="text-gray-900 font-semibold mb-4">Legal & Connect</h3>
+            <ul className="space-y-2 mb-6">
+              {[
+                { name: "Privacy Policy", path: "/privacy-policy" },
+                { name: "Terms & Conditions", path: "/terms-and-conditions" },
+                { name: "Refund Policy", path: "/refund-policy" },
+                { name: "Shipping Policy", path: "/shipping-policy" },
+              ].map((link) => (
+                <li key={link.name}>
+                  <Link
+                    to={link.path}
+                    className="text-gray-600 hover:text-orca-600 transition-colors text-sm inline-flex items-center gap-2 group no-underline"
+                  >
+                    <span className="w-1 h-1 bg-orca-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
 
             {/* Social Icons */}
-            <div className="flex space-x-4">
-              {["twitter", "facebook", "instagram", "github"].map((social) => (
+            <div className="flex gap-3">
+              {[
+                { name: "twitter", icon: "M22 4.01C21 4.5 20.02 4.69 19 5C17.879 3.735 16 3.665 14.14 4.482C12.28 5.3 11.142 7.235 11.5 9.5C8.14 9.3 5.18 7.68 3 5C3 5 -1 13.37 8 17C6 18 4 19 1 19C4 21 7 22 10 22C17.1 22 22 16.47 22 9.5C22 9.22 21.97 8.94 21.92 8.67C21.97 8.4 22 8.15 22 7.87C22 6.73 21.45 5.61 20.5 5C21.5 5 22 4.01 22 4.01Z" },
+                { name: "facebook", icon: "M18 2H15C12.791 2 11 3.791 11 6V9H7V13H11V22H15V13H19L20 9H15V6C15 5.448 15.448 5 16 5H18V2Z" },
+                { name: "instagram", icon: "M12 2C6.477 2 2 6.477 2 12C2 17.523 6.477 22 12 22C17.523 22 22 17.523 22 12C22 6.477 17.523 2 12 2ZM12 7C14.761 7 17 9.239 17 12C17 14.761 14.761 17 12 17C9.239 17 7 14.761 7 12C7 9.239 9.239 7 12 7ZM18 6C18.552 6 19 6.448 19 7C19 7.552 18.552 8 18 8C17.448 8 17 7.552 17 7C17 6.448 17.448 6 18 6Z" },
+              ].map((social) => (
                 <a
-                  key={social}
+                  key={social.name}
                   href="#"
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-gray-600 hover:text-orca-600 hover:bg-orca-50 transition-colors"
-                  aria-label={`${social} link`}
+                  className="w-9 h-9 rounded-lg bg-gray-100 hover:bg-orca-600 flex items-center justify-center transition-all duration-200 group"
+                  aria-label={`${social.name} link`}
                 >
-                  {/* (Same SVG icons as before) */}
                   <svg
-                    width="20"
-                    height="20"
+                    width="18"
+                    height="18"
                     viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    className="text-gray-500 group-hover:text-white transition-colors"
                   >
-                    {social === "twitter" && (
-                      <path
-                        d="M22 4.01C21 4.5 20.02 4.69 19 5C17.879 3.735 16 3.665 14.14 4.482C12.28 5.3 11.142 7.235 11.5 9.5C8.14 9.3 5.18 7.68 3 5C3 5 -1 13.37 8 17C6 18 4 19 1 19C4 21 7 22 10 22C17.1 22 22 16.47 22 9.5C22 9.22 21.97 8.94 21.92 8.67C21.97 8.4 22 8.15 22 7.87C22 6.73 21.45 5.61 20.5 5C21.5 5 22 4.01 22 4.01Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-
-                    {social === "facebook" && (
-                      <path
-                        d="M18 2H15C12.791 2 11 3.791 11 6V9H7V13H11V22H15V13H19L20 9H15V6C15 5.448 15.448 5 16 5H18V2Z"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    )}
-
-                    {social === "instagram" && (
-                      <>
-                        <rect
-                          x="2"
-                          y="2"
-                          width="20"
-                          height="20"
-                          rx="5"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                        />
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="4"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                        />
-                        <path
-                          d="M18 6L18.0002 6"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                        />
-                      </>
-                    )}
-
-                    {social === "github" && (
-                      <path
-                        d="M9 19C4.5 20.5 4.5 16.5 2 16M16 22V18.13C16.0375 17.6532 15.9731 17.1738 15.811 16.7238C15.6489 16.2738 15.3929 15.8634 15.06 15.52C18.2 15.17 21.5 13.98 21.5 8.52C21.4997 7.12383 20.9627 5.7812 20 4.77C20.4559 3.54851 20.4236 2.19835 19.91 1C19.91 1 18.73 0.650001 16 2.48C13.708 1.85882 11.292 1.85882 9 2.48C6.27 0.650001 5.09 1 5.09 1C4.57638 2.19835 4.54414 3.54851 5 4.77C4.03013 5.7887 3.49252 7.14346 3.5 8.55C3.5 13.97 6.8 15.16 9.94 15.55C9.611 15.89 9.35726 16.2954 9.19531 16.7399C9.03335 17.1844 8.96681 17.6581 9 18.13V22"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    )}
+                    <path d={social.icon} />
                   </svg>
                 </a>
               ))}
             </div>
           </div>
-
-          {/* Footer Navigation */}
-          <div className="md:col-span-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-                  Company
-                </h3>
-                <ul className="space-y-3">
-                  <li>
-                    <Link
-                      to="/about"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      About
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/contact"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Contact
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/blog"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Blog
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-                  Policies
-                </h3>
-                <ul className="space-y-3">
-                  <li>
-                    <Link
-                      to="/privacy-policy"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Privacy Policy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/terms-and-conditions"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Terms & Conditions
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/refund-policy"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Refund Policy
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/shipping-policy"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Shipping Policy
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-                  Support
-                </h3>
-                <ul className="space-y-3">
-                  <li>
-                    <Link
-                      to="/faq"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      FAQ
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/support"
-                      className="text-gray-600 hover:text-orca-600"
-                    >
-                      Customer Support
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Bottom Footer */}
-        <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+        {/* Bottom Bar */}
+        <div className="border-t border-gray-200 pt-6 text-center">
           <p className="text-gray-500 text-sm">
-            &copy; {new Date().getFullYear()} ORCA. All rights reserved.
+            &copy; {new Date().getFullYear()} ORCA. Crafted with care for exceptional experiences.
           </p>
-
-          <div className="mt-4 md:mt-0 flex space-x-6">
-            <Link
-              to="/privacy-policy"
-              className="text-sm text-gray-500 hover:text-orca-600"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              to="/terms-and-conditions"
-              className="text-sm text-gray-500 hover:text-orca-600"
-            >
-              Terms & Conditions
-            </Link>
-            <Link
-              to="/refund-policy"
-              className="text-sm text-gray-500 hover:text-orca-600"
-            >
-              Refund Policy
-            </Link>
-            <Link
-              to="/shipping-policy"
-              className="text-sm text-gray-500 hover:text-orca-600"
-            >
-              Shipping Policy
-            </Link>
-          </div>
         </div>
       </div>
     </footer>

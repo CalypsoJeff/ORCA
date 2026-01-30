@@ -12,7 +12,6 @@ export default function UserSidebar({ collapsed = false, onToggle }) {
     onToggle?.(next);
   };
 
-  // Simple icon placeholders to avoid extra icon deps (you can swap with lucide/react-icons later)
   const Dot = ({ className = "" }) => (
     <span
       className={`me-2 d-inline-block rounded-circle ${className}`}

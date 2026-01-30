@@ -26,6 +26,8 @@ import TermsAndConditions from "../../pages/user/TermsAndConditions";
 import RefundPolicy from "../../pages/user/RefundPolicy";
 import ShippingPolicy from "../../pages/user/ShippingPolicy";
 import Contact from "../../pages/user/Contact";
+import ChangePassword from "../../components/user/ChangePassword";
+import ForgotPassword from "../../components/user/ForgotPassword";
 
 const UserRoutes = () => {
   return (
@@ -49,6 +51,7 @@ const UserRoutes = () => {
       <Route path="/contact" element={<Contact />} />
       <Route path="/rides" element={<RidersPage />} />
       <Route path="/trekking" element={<Trekkings />} />
+      <Route path="/account/forgot-password" element={<ForgotPassword />} />
 
       {/* Private Routes */}
       <Route element={<UserPrivateRoutes />}>
@@ -57,14 +60,7 @@ const UserRoutes = () => {
         <Route path="/order/success/:orderId" element={<OrderSuccess />} />
         <Route path="/account/orders" element={<UserOrders />} />
         <Route path="/account/orders/:orderId" element={<OrderDetails />} />
-        {/* <Route
-          path="/account/change-password"
-          element={<ChangePasswordPage />}
-        /> */}
-        {/* <Route
-          path="/account/forgot-password"
-          element={<ForgotPasswordPage />}
-        /> */}
+        <Route path="/account/change-password" element={<ChangePassword />} />
         <Route path="/checkout" element={<CheckoutPage />} />
 
         <Route

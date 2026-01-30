@@ -18,46 +18,29 @@ const loginUser = async (req, res) => {
   try {
     console.log("User login started");
     const { phone, password } = req.body;
-    // Validate input
     if (!phone || !password) {
       return res.status(400).json({ error: "Phone and password are required." });
     }
-
-    // Find user by phone and select the password explicitly
     const user = await User.findOne({ phone }).select('+password');
 
     if (!user) {
       return res.status(401).json({ error: "User not found. Please register first." });
     }
 
-    // Check if the user is banned
     if (user.status === 'Banned') {
       return res.status(403).json({ message: "Your account is banned. Please contact support." });
     }
-
-    // Ensure user has a password before comparing
     if (!user.password) {
       return res.status(500).json({ error: "Password not found. Try resetting your password." });
     }
 
-    // Compare hashed password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
       return res.status(401).json({ error: "Invalid credentials. Please try again." });
     }
-
-    // Generate JWT tokens
     const { token, refreshToken } = generateToken(user._id, user.phone, "user");
-
-    console.log("User login successful");
-
-    // Convert Mongoose document to plain object
     const userData = user.toObject();
-
-    // Remove password field
     delete userData.password;
-
-    // Send response
     res.status(200).json({
       message: "Login successful!",
       token,
@@ -70,7 +53,6 @@ const loginUser = async (req, res) => {
     res.status(500).json({ error: "An error occurred during login. Please try again later." });
   }
 };
-// Register User and Send OTP
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -111,7 +93,6 @@ export const googleAuth = async (req, res) => {
     const { idToken } = req.body;
     if (!idToken) return res.status(400).json({ error: "Missing Google ID token" });
 
-    // ✅ Verify the token using Firebase Admin
     const decoded = await admin.auth().verifyIdToken(idToken);
     const { email, name, picture } = decoded;
 
@@ -119,7 +100,6 @@ export const googleAuth = async (req, res) => {
       return res.status(400).json({ error: "Email not available from Google" });
     }
 
-    // 🔍 Find or create user
     let user = await User.findOne({ email });
     if (!user) {
       user = await User.create({
@@ -135,7 +115,6 @@ export const googleAuth = async (req, res) => {
       return res.status(403).json({ message: "Your account is banned. Please contact support." });
     }
 
-    // 🪙 Generate JWT tokens for your app
     const { token, refreshToken } = generateToken(user._id, user.phone, "user");
 
     res.status(200).json({
@@ -369,7 +348,6 @@ const createRazorpayCompetition = async (req, res) => {
       // If order payment already marked as paid
       if (order.status === "paid") {
         try {
-          // Update user registration
           await User.findByIdAndUpdate(
             registrationDetails.userId,
             {
@@ -395,7 +373,6 @@ const createRazorpayCompetition = async (req, res) => {
             { new: true }
           );
 
-          // Delete temporary registration from MongoDB
           await TempCompetitionRegistration.deleteOne({
             competitionId,
             userId,
@@ -437,16 +414,24 @@ const loadProducts = async (req, res) => {
 
 const loadShopProducts = async (req, res) => {
   try {
-    const allProducts = await products.find().sort({ createdAt: -1 });
+    const allProducts = await products
+      .find()
+      .sort({ createdAt: -1 })
+      .populate("category", "name");
+
     return res.status(200).json({
       message: "Products loaded successfully",
-      products: allProducts
+      products: allProducts,
     });
   } catch (error) {
-    console.error('Error loading products:', error);
-    return null;
+    console.error("Error loading shop products:", error);
+    return res.status(500).json({
+      message: "Failed to load products",
+      error: error.message,
+    });
   }
-}
+};
+
 const loadProductDetails = async (req, res) => {
   try {
     const { id } = req.params;

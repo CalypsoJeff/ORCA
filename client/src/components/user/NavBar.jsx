@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import {
-  Home,
-  Trophy,
-  ShoppingCart,
-  LogOut,
-  UserCircle,
-} from "lucide-react";
+import { Home, Trophy, ShoppingCart, LogOut, UserCircle } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../features/auth/authSlice";
 import authInstanceAxios from "../../api/middlewares/interceptor";
@@ -22,7 +16,8 @@ const NavBar = () => {
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
 
-  const isLandingPage = location.pathname === "/home";
+  const path = location.pathname.replace(/\/$/, "");
+  const isLandingPage = path === "" || path === "/home";
 
   const navItems = [
     { name: "Home", url: "/home", icon: Home },
@@ -30,7 +25,6 @@ const NavBar = () => {
     { name: "Shop", url: "/shop", icon: ShoppingCart },
   ];
 
-  /* 🔹 Navbar shadow on scroll */
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -51,7 +45,7 @@ const NavBar = () => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  /* 🔹 Lock body scroll */
+  /* 🔹 Lock body scroll only when drawer open */
   useEffect(() => {
     document.body.style.overflow = isMenuOpen ? "hidden" : "auto";
     return () => (document.body.style.overflow = "auto");
@@ -64,23 +58,21 @@ const NavBar = () => {
 
   return (
     <>
-      {/* ================= HEADER ================= */}
       <header
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 px-6 md:px-10 py-4 transition-all duration-300",
-          scrolled
-            ? "bg-black/80 backdrop-blur-md shadow-md"
-            : "bg-transparent"
+          "fixed top-0 left-0 right-0 z-50 px-4 md:px-10 py-3 transition-all duration-300",
+          scrolled ? "bg-black/80 backdrop-blur-md shadow-md" : "bg-transparent"
         )}
       >
         <div className="container mx-auto flex items-center justify-between">
           {/* Logo */}
-          <span
-            className="text-2xl font-bold text-sky-600 cursor-pointer"
+          <button
+            aria-label="Go to home"
             onClick={() => navigate("/home")}
+            className="text-2xl font-bold text-sky-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 rounded"
           >
             ORCA
-          </span>
+          </button>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center space-x-8">
@@ -89,7 +81,7 @@ const NavBar = () => {
                 key={name}
                 to={url}
                 className={cn(
-                  "flex items-center gap-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 text-sm font-medium transition-colors no-underline",
                   isLandingPage
                     ? "text-white hover:text-sky-300"
                     : "text-black hover:text-sky-600"
@@ -102,11 +94,15 @@ const NavBar = () => {
           </nav>
 
           {/* Right Section */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {/* Cart */}
             <button
               onClick={() => navigate("/cart")}
-              className="relative p-2 rounded-full hover:bg-sky-100"
+              className={cn(
+                "relative p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-sky-500",
+                isLandingPage ? "hover:bg-white/10" : "hover:bg-sky-50"
+              )}
+              aria-label="Go to cart"
             >
               <ShoppingCart
                 className={cn(
@@ -121,45 +117,64 @@ const NavBar = () => {
               )}
             </button>
 
-            {/* Desktop User */}
             {user ? (
-              <div className="hidden md:flex items-center gap-2">
-                <UserCircle className="h-6 w-6 text-sky-600" />
-                <span className="text-sm">{user.name}</span>
-                <button onClick={handleLogout}>
+              <div className="hidden md:flex items-center gap-3">
+                <Link
+                  to="/account/profile"
+                  className={cn(
+                    "flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-sky-500 no-underline",
+                    isLandingPage ? "text-white" : "text-black"
+                  )}
+                  aria-label="Go to profile"
+                >
+                  <UserCircle className="h-6 w-6 text-sky-600" />
+                  <span className="text-sm">{user.name}</span>
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="p-1 rounded hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-200"
+                  aria-label="Logout"
+                >
                   <LogOut className="h-5 w-5 text-red-500" />
                 </button>
               </div>
             ) : (
               <Link
                 to="/login"
-                className="hidden md:flex h-10 px-6 items-center rounded-md bg-sky-600 text-white hover:bg-sky-700"
+                className="hidden md:inline-flex h-10 px-5 items-center rounded-md bg-sky-600 text-white hover:bg-sky-700 no-underline"
               >
                 Login / Signup
               </Link>
             )}
 
-            {/* Hamburger */}
+            {/* Hamburger (mobile) */}
             <button
-              className="md:hidden relative w-8 h-8"
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
               onClick={() => setIsMenuOpen((v) => !v)}
+              className={cn(
+                "md:hidden inline-flex items-center justify-center w-10 h-10 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500",
+                isLandingPage ? "text-white" : "text-sky-600"
+              )}
             >
+              {/* animated bars */}
               <span
                 className={cn(
-                  "absolute left-1/2 top-2 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
-                  isMenuOpen && "rotate-45 top-4"
+                  "block origin-center transition-transform duration-200 w-6 h-0.5 bg-current",
+                  isMenuOpen ? "rotate-45 translate-y-0" : "-translate-y-2"
                 )}
               />
               <span
                 className={cn(
-                  "absolute left-1/2 top-4 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
-                  isMenuOpen && "opacity-0"
+                  "block transition-opacity duration-200 w-6 h-0.5 bg-current my-1",
+                  isMenuOpen ? "opacity-0" : "opacity-100"
                 )}
               />
               <span
                 className={cn(
-                  "absolute left-1/2 top-6 h-0.5 w-6 bg-current transform -translate-x-1/2 transition-all",
-                  isMenuOpen && "-rotate-45 top-4"
+                  "block origin-center transition-transform duration-200 w-6 h-0.5 bg-current",
+                  isMenuOpen ? "-rotate-45 translate-y-0" : "translate-y-2"
                 )}
               />
             </button>
@@ -167,71 +182,85 @@ const NavBar = () => {
         </div>
       </header>
 
-      {/* ================= MOBILE DRAWER ================= */}
-      <div
-        className={cn(
-          "fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity md:hidden",
-          isMenuOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
-        )}
-        onClick={() => setIsMenuOpen(false)}
-      >
-        <aside
-          className={cn(
-            "absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out",
-            isMenuOpen ? "translate-x-0" : "translate-x-full"
-          )}
-          onClick={(e) => e.stopPropagation()}
+      {/* ================= MOBILE DRAWER (render only when open) ================= */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setIsMenuOpen(false)}
         >
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-bold text-sky-600">Menu</h2>
-            {cartCount > 0 && (
-              <p className="mt-2 text-sm text-gray-600">
-                🛒 Items in cart:{" "}
-                <span className="font-semibold">{cartCount}</span>
-              </p>
-            )}
-          </div>
-
-          <nav className="flex flex-col divide-y">
-            {navItems.map(({ name, url, icon: Icon }) => (
-              <Link
-                key={name}
-                to={url}
-                className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100"
-              >
-                <Icon className="h-5 w-5 text-sky-600" />
-                {name}
-              </Link>
-            ))}
-
-            {user ? (
-              <>
-                <Link
-                  to="/account/profile"
-                  className="px-6 py-4 hover:bg-gray-100"
-                >
-                  Profile
-                </Link>
+          <aside
+            className="absolute right-0 top-0 h-full w-[85%] max-w-sm bg-white shadow-2xl overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-sky-600">Menu</h2>
                 <button
-                  onClick={handleLogout}
-                  className="px-6 py-4 text-left text-red-600 hover:bg-red-50"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 rounded focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  aria-label="Close menu"
                 >
-                  Logout
+                  ✕
                 </button>
-              </>
-            ) : (
-              <Link
-                to="/login"
-                className="px-6 py-4 text-sky-600 hover:bg-sky-50"
-              >
-                Login / Signup
-              </Link>
-            )}
-          </nav>
-        </aside>
-      </div>
+              </div>
+
+              {cartCount > 0 && (
+                <p className="mt-2 text-sm text-gray-600">
+                  🛒 Items in cart:{" "}
+                  <span className="font-semibold">{cartCount}</span>
+                </p>
+              )}
+            </div>
+
+            <nav className="flex flex-col divide-y">
+              {navItems.map(({ name, url, icon: Icon }) => (
+                <Link
+                  key={name}
+                  to={url}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-6 py-4 hover:bg-gray-100 text-base no-underline"
+                >
+                  <Icon className="h-5 w-5 text-sky-600" />
+                  <span>{name}</span>
+                </Link>
+              ))}
+
+              <div className="px-6 py-4">
+                {user ? (
+                  <>
+                    <Link
+                      to="/account/profile"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="block px-3 py-3 rounded hover:bg-gray-100"
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full text-left px-3 py-3 rounded text-red-600 hover:bg-red-50"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <Link
+                    to="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="block px-3 py-3 rounded text-sky-600 hover:bg-sky-50"
+                  >
+                    Login / Signup
+                  </Link>
+                )}
+              </div>
+            </nav>
+          </aside>
+        </div>
+      )}
     </>
   );
 };

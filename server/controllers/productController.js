@@ -2,26 +2,24 @@ import Product from '../models/productModel.js';
 import Category from "../models/productCategory.js"
 import { uploadToCloudinary } from '../helper/uploadToCloudinary.js';
 const loadProductsPage = async (req, res) => {
-    try {
-        const Products = await Product.find().sort({ createdAt: -1 }).populate("category", "name");
-        if (!Products || Products.length === 0) {
-            return res.status(200).json({
-                message: "No products found.",
-                Products: [],
-            });
-        }
-        return res.status(200).json({
-            message: "Products loaded successfully.",
-            Products,
-        });
-    } catch (error) {
-        console.error("Error loading products:", error);
-        return res.status(500).json({
-            message: "Failed to load products.",
-            error: error.message,
-        });
-    }
+  try {
+    const products = await Product.find()
+      .sort({ createdAt: -1 })
+      .populate("category", "name"); // works with mongoose.model("Category", ...)
+
+    return res.status(200).json({
+      message: "Products loaded successfully.",
+      products: products || [],
+    });
+  } catch (error) {
+    console.error("Error loading products:", error);
+    return res.status(500).json({
+      message: "Failed to load products.",
+      error: error.message,
+    });
+  }
 };
+
 const addProduct = async (req, res) => {
     try {
         const {
@@ -52,7 +50,7 @@ const addProduct = async (req, res) => {
         const uploadedImages = await Promise.all(
             files.map(async (file) => {
                 const { secure_url } = await uploadToCloudinary(file);
-                console.log(secure_url,"details about cloud image")
+                console.log(secure_url, "details about cloud image")
                 return secure_url;
             })
         );

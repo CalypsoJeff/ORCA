@@ -1,120 +1,252 @@
-
 import { cn } from "@/lib/utils";
 
-const features = [
+const featureBlocks = [
   {
-    title: "Intuitive Design",
-    description: "Clean aesthetics and intuitive interactions that feel natural from the first touch.",
+    title: "Performance Gear",
+    description:
+      "Engineered fabrics and precise fits that move with you — sweat-wicking, durable, built for athletes.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 2V4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 20V22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M4.93 4.93L6.34 6.34" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17.66 17.66L19.07 19.07" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2 12H4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M20 12H22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M4.93 19.07L6.34 17.66" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17.66 6.34L19.07 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 2v6"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M6 8l6 14 6-14"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
   {
-    title: "Powerful Technology",
-    description: "Advanced algorithms working silently behind a simple interface, handling complexity so you don't have to.",
+    title: "Satisfaction Promise",
+    description:
+      "30-day easy returns, quality checks, and secure checkout — shop risk-free with a trusted guarantee.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M20 6L9 17l-5-5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
   {
-    title: "Seamless Integration",
-    description: "Works harmoniously with your existing tools and workflows, enhancing rather than disrupting.",
+    title: "Fast Shipping",
+    description:
+      "Get your essentials delivered quickly with reliable courier partners and real-time tracking.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 16V8.00002C20.9996 7.6493 20.9071 7.30483 20.7315 7.00119C20.556 6.69754 20.3037 6.44539 20 6.27002L13 2.27002C12.696 2.09449 12.3511 2.00208 12 2.00208C11.6489 2.00208 11.304 2.09449 11 2.27002L4 6.27002C3.69626 6.44539 3.44398 6.69754 3.26846 7.00119C3.09294 7.30483 3.00036 7.6493 3 8.00002V16C3.00036 16.3508 3.09294 16.6952 3.26846 16.9989C3.44398 17.3025 3.69626 17.5547 4 17.73L11 21.73C11.304 21.9056 11.6489 21.998 12 21.998C12.3511 21.998 12.696 21.9056 13 21.73L20 17.73C20.3037 17.5547 20.556 17.3025 20.7315 16.9989C20.9071 16.6952 20.9996 16.3508 21 16Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3.27002 6.96002L12 12.01L20.73 6.96002" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 22.08V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M3 7h13l3 4v6"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M16 15h1"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle
+          cx="7.5"
+          cy="18.5"
+          r="1.5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
+        <circle
+          cx="18.5"
+          cy="18.5"
+          r="1.5"
+          stroke="currentColor"
+          strokeWidth="1.6"
+        />
       </svg>
     ),
   },
   {
-    title: "Thoughtful Details",
-    description: "Every pixel, interaction, and transition crafted with purpose and precision.",
+    title: "Trainer Approved",
+    description:
+      "Products and routines vetted by certified trainers — pick gear that matches real workouts.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 8V5C21 3.89543 20.1046 3 19 3H16M16 21H19C20.1046 21 21 20.1046 21 19V16M3 16V19C3 20.1046 3.89543 21 5 21H8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M12 12H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5s-3 1.343-3 3 1.343 3 3 3z"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M5 21v-2a4 4 0 014-4h6a4 4 0 014 4v2"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
   {
-    title: "Privacy Focused",
-    description: "Your data stays yours. Strong privacy controls and transparent policies by default.",
+    title: "Member Rewards",
+    description:
+      "Earn points, unlock discounts and priority drops — loyal customers move faster.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 22C12 22 20 18 20 12V5L12 2L4 5V12C4 18 12 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M9 12L11 14L15 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 2l2.2 4.5L19 8l-3.6 3.2L15.5 16 12 13.8 8.5 16l.1-4.8L5 8l4.8-.5L12 2z"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
   {
-    title: "Timeless Design",
-    description: "Created not just for today, but built to remain relevant and beautiful for years to come.",
+    title: "Easy Fit Guide",
+    description:
+      "Quick size guide and AI recommendations so your first order fits right the first time.",
     icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 8V12L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3.05078 11.0002C3.27806 7.8162 5.41616 5.11231 8.48395 4.11345C11.5517 3.11459 14.8954 4.05646 17.0002 6.50016" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M20.9492 13.0002C20.7219 16.1842 18.5838 18.8881 15.516 19.8869C12.4483 20.8858 9.10461 19.9439 6.99978 17.5002" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17 3L21 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M3 18L7 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M17 6H21V2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M7 22H3V18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 3v18"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3 12h18"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
       </svg>
     ),
   },
 ];
 
-const FeatureSection = () => {
+const FeatureSection = ({ variant = "light" }) => {
+  // variant: "dark" or "light" if you want a white background version later
+  const isDark = variant === "dark";
+
   return (
-    <section id="features" className="py-20 md:py-32 bg-white">
+    <section
+      id="features"
+      className={cn(
+        "py-16 md:py-24",
+        isDark ? "bg-black text-white" : "bg-white text-gray-900",
+      )}
+    >
       <div className="container mx-auto px-6">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <div className="inline-block px-3 py-1 mb-6 rounded-full bg-orca-100 text-orca-800 text-xs font-medium tracking-wide">
-            Key Features
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <div
+            className={cn(
+              "inline-block px-3 py-1 mb-4 rounded-full text-xs font-medium tracking-wide",
+              isDark
+                ? "bg-slate-800 text-sky-300"
+                : "bg-orca-100 text-orca-800",
+            )}
+          >
+            Why ORCA
           </div>
-          <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">
-            Crafted with attention to every detail
+
+          <h2
+            className={cn(
+              "text-3xl md:text-4xl font-display font-bold mb-4",
+              isDark ? "text-white" : "text-gray-900",
+            )}
+          >
+            Performance, comfort, and trust — all in one place
           </h2>
-          <p className="text-gray-600 text-lg">
-            We believe that great design is not just about how it looks, but how it works. Every feature is built with purpose and precision.
+
+          <p
+            className={cn(
+              "max-w-2xl mx-auto text-lg",
+              isDark ? "text-gray-300" : "text-gray-600",
+            )}
+          >
+            Shop performance-driven fitness gear and accessories — thoughtfully
+            designed, trainer-approved, and backed by a satisfaction promise.
           </p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 ">
-          {features.map((feature, index) => (
-            <div 
-              key={feature.title}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featureBlocks.map((f, idx) => (
+            <article
+              key={f.title}
               className={cn(
-                "relative p-8 rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:translate-y-[-4px]",
-                "opacity-0"
+                "flex gap-4 p-5 rounded-2xl border transition-transform duration-200",
+                isDark
+                  ? "border-gray-800 bg-black/40 hover:scale-[1.02]"
+                  : "border-gray-100 bg-white hover:shadow-md",
               )}
-              style={{ animationDelay: `${(index + 1) * 100}ms` }}
+              style={{ alignItems: "flex-start" }}
+              tabIndex={0}
+              aria-labelledby={`feature-${idx}`}
               data-animate="true"
             >
-              <div className="w-12 h-12 mb-5 flex items-center justify-center rounded-xl bg-orca-50 text-orca-600">
-                {feature.icon}
+              <div
+                className={cn(
+                  "flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center",
+                  isDark
+                    ? "bg-slate-800 text-sky-400"
+                    : "bg-orca-50 text-orca-600",
+                )}
+              >
+                {f.icon}
               </div>
-              <h3 className="text-xl font-display font-semibold text-gray-900 mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600">
-                {feature.description}
-              </p>
-            </div>
+
+              <div className="min-w-0">
+                <h3
+                  id={`feature-${idx}`}
+                  className={cn(
+                    "text-lg font-semibold mb-1",
+                    isDark ? "text-white" : "text-gray-900",
+                  )}
+                >
+                  {f.title}
+                </h3>
+                <p
+                  className={cn(
+                    "text-sm",
+                    isDark ? "text-gray-300" : "text-gray-600",
+                  )}
+                >
+                  {f.description}
+                </p>
+              </div>
+            </article>
           ))}
+        </div>
+
+        <div className="mt-10 text-center">
+          <button
+            onClick={() => (window.location.href = "/shop")}
+            className={cn(
+              "px-6 py-3 rounded-md font-medium transition-colors",
+              isDark
+                ? "bg-orca-600 text-white hover:bg-orca-700"
+                : "bg-orca-600 text-white hover:bg-orca-700",
+            )}
+          >
+            Browse Bestsellers
+          </button>
         </div>
       </div>
     </section>

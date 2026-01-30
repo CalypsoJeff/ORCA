@@ -44,3 +44,74 @@ body,
 .read-the-docs {
   color: #888;
 }
+
+/* hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+/* subtle wavy texture for hero background (base you already had) */
+.hero-waves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: #07070a; /* dark base */
+
+  background-image:
+    repeating-linear-gradient(180deg, rgba(255,255,255,0.012) 0 1px, transparent 1px 30px),
+    radial-gradient(1200px 400px at 10% 20%, rgba(255,255,255,0.01), transparent 30%),
+    radial-gradient(800px 300px at 90% 80%, rgba(255,255,255,0.008), transparent 30%);
+
+  background-blend-mode: overlay;
+  opacity: 1;
+  z-index: -10; /* ensure sits behind hero content */
+  transform: translateZ(0); /* promote to GPU layer */
+  background-size: 140% 140%, 120% 120%, 120% 120%;
+}
+
+/* gentle pan animation */
+@keyframes wave-pan {
+  0% {
+    background-position: 0% 0%, 0% 0%, 0% 0%;
+  }
+  50% {
+    background-position: 8% 6%, -6% 4%, 6% -8%;
+  }
+  100% {
+    background-position: 0% 0%, 0% 0%, 0% 0%;
+  }
+}
+
+.animate-waves {
+  animation: wave-pan 18s ease-in-out infinite;
+  will-change: background-position;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-waves {
+    animation: none;
+  }
+}
+
+/* mobile adjustments - keep subtle */
+@media (max-width: 768px) {
+  .hero-waves {
+    background-size: 220% 220%, 160% 160%, 160% 160%;
+  }
+}
+/* prevents weird press animation from changing sizes */
+.btn:active,
+button:active {
+  transform: none !important;
+}
+
+/* a subtle hover lift for cards */
+.address-card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
