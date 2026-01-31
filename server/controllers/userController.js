@@ -114,9 +114,7 @@ export const googleAuth = async (req, res) => {
     } else if (user.status === "Banned") {
       return res.status(403).json({ message: "Your account is banned. Please contact support." });
     }
-
     const { token, refreshToken } = generateToken(user._id, user.phone, "user");
-
     res.status(200).json({
       message: "Google Auth successful",
       token,

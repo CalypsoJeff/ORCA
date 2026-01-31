@@ -90,10 +90,17 @@ const orderSchema = new Schema(
         reason: { type: String },
         response: { type: Boolean },
         expiresAt: { type: Date, index: true },
+        stockDeducted: { type: Boolean, default: false, index: true },
+        stockDeductedAt: { type: Date, default: null },
+        stockRestored: { type: Boolean, default: false, index: true },
+        stockRestoredAt: { type: Date, default: null },
+
         shippedDate: { type: Date, default: null },
         deliveredDate: { type: Date, default: null },
         coupon: { type: String },
         notes: { type: Object },
+
+
     },
     { timestamps: true }
 );

@@ -2,22 +2,21 @@ import Product from '../models/productModel.js';
 import Category from "../models/productCategory.js"
 import { uploadToCloudinary } from '../helper/uploadToCloudinary.js';
 const loadProductsPage = async (req, res) => {
-  try {
-    const products = await Product.find()
-      .sort({ createdAt: -1 })
-      .populate("category", "name"); // works with mongoose.model("Category", ...)
-
-    return res.status(200).json({
-      message: "Products loaded successfully.",
-      products: products || [],
-    });
-  } catch (error) {
-    console.error("Error loading products:", error);
-    return res.status(500).json({
-      message: "Failed to load products.",
-      error: error.message,
-    });
-  }
+    try {
+        const products = await Product.find()
+            .sort({ createdAt: -1 })
+            .populate("category", "name");
+        return res.status(200).json({
+            message: "Products loaded successfully.",
+            products: products || [],
+        });
+    } catch (error) {
+        console.error("Error loading products:", error);
+        return res.status(500).json({
+            message: "Failed to load products.",
+            error: error.message,
+        });
+    }
 };
 
 const addProduct = async (req, res) => {
@@ -83,6 +82,7 @@ const addProduct = async (req, res) => {
 const editProduct = async (req, res) => {
     try {
         const { id } = req.params;
+
         const {
             name,
             description,
@@ -93,59 +93,95 @@ const editProduct = async (req, res) => {
             sizes,
             material,
             rating,
+            existingImages, // ✅ from frontend (JSON string)
         } = req.body;
+
         const existingProduct = await Product.findById(id);
         if (!existingProduct) {
             return res.status(404).json({
-                message: 'Product not found.',
+                message: "Product not found.",
             });
         }
-        let parsedSizes;
-        try {
-            parsedSizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
-        } catch (error) {
-            return res.status(400).json({ message: "Invalid sizes format." });
+
+        // Parse sizes if present
+        let parsedSizes = existingProduct.sizes;
+        if (sizes !== undefined) {
+            try {
+                parsedSizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
+            } catch (error) {
+                return res.status(400).json({ message: "Invalid sizes format." });
+            }
         }
+
+        // Validate category if changed
         if (category) {
             const categoryExists = await Category.findById(category);
             if (!categoryExists) {
-                return res.status(400).json({ message: 'Invalid category reference.' });
+                return res.status(400).json({ message: "Invalid category reference." });
             }
         }
-        const files = req.files;
-        if (!files || files.length === 0) {
-            return res.status(400).json({ message: "At least one image is required" });
+
+        // ✅ Parse existingImages (array of URLs)
+        let parsedExistingImages = existingProduct.images; // fallback to DB
+        if (existingImages !== undefined) {
+            try {
+                parsedExistingImages =
+                    typeof existingImages === "string"
+                        ? JSON.parse(existingImages)
+                        : existingImages;
+                if (!Array.isArray(parsedExistingImages)) parsedExistingImages = [];
+            } catch (e) {
+                return res.status(400).json({ message: "Invalid existingImages format." });
+            }
         }
-        const uploadedImages = await Promise.all(
-            files.map(async (file) => {
-                const { secure_url } = await uploadToCloudinary(file);
-                return secure_url;
-            })
-        );
+
+        // ✅ Upload new files if any (optional now)
+        const files = req.files || [];
+        const uploadedImages =
+            files.length > 0
+                ? await Promise.all(
+                    files.map(async (file) => {
+                        const { secure_url } = await uploadToCloudinary(file);
+                        return secure_url;
+                    })
+                )
+                : [];
+
+        // ✅ Final images = kept existing + newly uploaded
+        const finalImages = [...parsedExistingImages, ...uploadedImages];
+
+        // Optional: if you want to enforce at least 1 image always:
+        if (finalImages.length === 0) {
+            return res.status(400).json({
+                message: "At least one image is required (existing or new).",
+            });
+        }
+
         const updatedProduct = await Product.findByIdAndUpdate(
             id,
             {
-                name: name || existingProduct.name,
-                description: description || existingProduct.description,
-                price: price || existingProduct.price,
-                discount: discount || existingProduct.discount,
-                category: category || existingProduct.category,
-                brand: brand || existingProduct.brand,
-                sizes: parsedSizes || existingProduct.sizes,
-                material: material || existingProduct.material,
-                images: uploadedImages || existingProduct.images,
-                rating: rating || existingProduct.rating,
+                name: name ?? existingProduct.name,
+                description: description ?? existingProduct.description,
+                price: price ?? existingProduct.price,
+                discount: discount ?? existingProduct.discount,
+                category: category ?? existingProduct.category,
+                brand: brand ?? existingProduct.brand,
+                sizes: parsedSizes ?? existingProduct.sizes,
+                material: material ?? existingProduct.material,
+                images: finalImages, // ✅ IMPORTANT FIX
+                rating: rating ?? existingProduct.rating,
             },
             { new: true, runValidators: true }
-        );
+        ).populate("category", "name");
+
         return res.status(200).json({
-            message: 'Product updated successfully.',
+            message: "Product updated successfully.",
             product: updatedProduct,
         });
     } catch (error) {
-        console.error('Error editing product:', error);
+        console.error("Error editing product:", error);
         return res.status(500).json({
-            message: 'Failed to edit product.',
+            message: "Failed to edit product.",
             error: error.message,
         });
     }

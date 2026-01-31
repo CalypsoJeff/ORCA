@@ -7,11 +7,18 @@ import {
     verifyCheckoutSignature,
     verifyWebhookSignature,
 } from "../services/razorpayVerify.js";
-
+import { finalizePaidOrder } from "../helper/orderFinalizeService.js";
 export const createOrderFromCart = async (req, res) => {
     try {
-        const userId = req.user?._id || req.body.userId;
-        if (!userId) return res.status(400).json({ error: "Missing user" });
+        console.log("AUTH CHECK:", {
+            hasUser: !!req.user,
+            userIdFromReqUser: req.user?._id,
+            userIdFromBody: req.body?.userId,
+            headersAuth: req.headers.authorization,
+        });
+
+        const userId = req.user?._id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
         const { addressId } = req.body;
         if (!addressId) return res.status(400).json({ error: "Missing addressId" });
         const cart = await Cart.findOne({ userId }).lean();
@@ -81,29 +88,25 @@ export const verifyPayment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
             req.body;
+
         const ok = verifyCheckoutSignature({
             razorpay_order_id,
             razorpay_payment_id,
             razorpay_signature,
         });
+
         if (!ok) return res.status(400).json({ status: "failure" });
-        const order = await Order.findOne({
-            "payment.razorpayOrderId": razorpay_order_id,
+
+        const order = await finalizePaidOrder({
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            markCaptured: true,
         });
-        if (!order) return res.status(404).json({ error: "Order not found" });
-        if (order.payment.status !== "PAID") {
-            order.payment.status = "PAID";
-            order.payment.razorpayPaymentId = razorpay_payment_id;
-            order.payment.razorpaySignature = razorpay_signature;
-            order.status = "Confirmed";
-            await order.save();
-            await Cart.updateOne(
-                { userId: order.user },
-                { $set: { items: [], totalPrice: 0 } }
-            );
-        }
+
         return res.json({ status: "success", orderId: order._id });
     } catch (err) {
+        console.error("verifyPayment error:", err);
         return res.status(500).json({ error: err.message });
     }
 };
@@ -118,98 +121,63 @@ export const handleWebhook = async (req, res) => {
 
         const payload = JSON.parse(rawBody.toString("utf8"));
 
-        // ✅ Prefer payment.captured
         if (payload.event === "payment.captured") {
             const payment = payload.payload.payment.entity;
-            const rzpOrderId = payment.order_id;
-            const rzpPaymentId = payment.id;
 
-            const order = await Order.findOne({
-                "payment.razorpayOrderId": rzpOrderId,
+            await finalizePaidOrder({
+                razorpayOrderId: payment.order_id,
+                razorpayPaymentId: payment.id,
+                razorpaySignature: null,
+                markCaptured: true,
             });
-            if (order && order.payment.status !== "PAID") {
-                order.payment.status = "PAID";
-                order.payment.captured = true;
-                order.payment.razorpayPaymentId = rzpPaymentId;
-                order.status = "Confirmed";
-                order.expiresAt = null;
-                await order.save();
-                await Cart.updateOne(
-                    { userId: order.user },
-                    { $set: { items: [], totalPrice: 0 } }
-                );
-            }
         }
 
         return res.json({ ok: true });
     } catch (err) {
+        console.error("handleWebhook error:", err);
         return res.status(500).send(err.message);
     }
 };
 
+// ✅ UPDATED: callback also finalizes (still safe / no double deduct)
 export const razorpayCallback = async (req, res) => {
-  const frontend =
-    process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://orcasportsclub.in";
+    const frontend =
+        process.env.FRONTEND_URL?.replace(/\/$/, "") || "https://orcasportsclub.in";
 
-  // 🔍 Debug (remove after confirmed)
-  console.log("🔔 RAZORPAY CALLBACK HIT");
-  console.log("CONTENT-TYPE:", req.headers["content-type"]);
-  console.log("REQ.BODY:", req.body);
+    console.log("🔔 RAZORPAY CALLBACK HIT");
+    console.log("CONTENT-TYPE:", req.headers["content-type"]);
+    console.log("REQ.BODY:", req.body);
 
-  try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    } = req.body;
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+            req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      console.error("❌ Missing Razorpay fields");
-      return res.redirect(`${frontend}/payment-failed`);
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            console.error("❌ Missing Razorpay fields");
+            return res.redirect(`${frontend}/payment-failed`);
+        }
+
+        const ok = verifyCheckoutSignature({
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature,
+        });
+
+        if (!ok) {
+            console.error("❌ Razorpay signature verification failed");
+            return res.redirect(`${frontend}/payment-failed`);
+        }
+
+        const order = await finalizePaidOrder({
+            razorpayOrderId: razorpay_order_id,
+            razorpayPaymentId: razorpay_payment_id,
+            razorpaySignature: razorpay_signature,
+            markCaptured: true,
+        });
+
+        return res.redirect(`${frontend}/order/success/${order._id}`);
+    } catch (err) {
+        console.error("🔥 razorpayCallback error:", err);
+        return res.redirect(`${frontend}/payment-failed`);
     }
-
-    // ✅ Verify signature immediately (don’t wait for webhook)
-    const ok = verifyCheckoutSignature({
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-    });
-
-    if (!ok) {
-      console.error("❌ Razorpay signature verification failed");
-      return res.redirect(`${frontend}/payment-failed`);
-    }
-
-    const order = await Order.findOne({
-      "payment.razorpayOrderId": razorpay_order_id,
-    });
-
-    if (!order) {
-      console.error("❌ Order not found for order_id:", razorpay_order_id);
-      return res.redirect(`${frontend}/payment-failed`);
-    }
-
-    // ✅ Mark order paid
-    if (order.payment.status !== "PAID") {
-      order.payment.status = "PAID";
-      order.payment.razorpayPaymentId = razorpay_payment_id;
-      order.payment.razorpaySignature = razorpay_signature;
-      order.payment.captured = true;
-      order.status = "Confirmed";
-      order.expiresAt = null;
-
-      await order.save();
-
-      await Cart.updateOne(
-        { userId: order.user },
-        { $set: { items: [], totalPrice: 0 } }
-      );
-    }
-
-    // ✅ SUCCESS REDIRECT
-    return res.redirect(`${frontend}/order/success/${order._id}`);
-  } catch (err) {
-    console.error("🔥 razorpayCallback error:", err);
-    return res.redirect(`${frontend}/payment-failed`);
-  }
 };
