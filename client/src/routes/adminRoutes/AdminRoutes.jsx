@@ -16,30 +16,34 @@ import AdminRequests from "../../pages/admin/AdminRequests";
 import OrdersList from "../../pages/admin/OrdersList";
 import OrderDetails from "../../pages/admin/OrderDetails";
 import GymRequests from "../../pages/admin/GymRequests";
-// import UserPrivateRoutes from "./UserPrivateRoutes";
+import AdminPrivateRoutes from "./AdminPrivateRoutes";
 
 const AdminRoutes = () => {
   return (
     <Routes>
+      {/* Public */}
       <Route path="/login" element={<AdminLogin />} />
-      <Route path="/pending-approval" element={<PendingApproval />} />
-      <Route path="/requests" element={<AdminRequests />} />
       <Route path="/register" element={<AdminRegister />} />
       <Route path="/otp" element={<VerifyOtpPage />} />
+
+      {/* Private */}
+      <Route element={<AdminPrivateRoutes />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/competitions" element={<Competitions />} />
+        <Route path="/fitness" element={<Fitness />} />
+        <Route path="/trekking" element={<Trekking />} />
+        <Route path="/category" element={<Category />} />
+        <Route path="/products" element={<Product />} />
+        <Route path="/userlist" element={<UserList />} />
+        <Route path="/orders" element={<OrdersList />} />
+        <Route path="/orders/:id" element={<OrderDetails />} />
+        <Route path="/gym-requests" element={<GymRequests />} />
+        <Route path="/pending-approval" element={<PendingApproval />} />
+        <Route path="/requests" element={<AdminRequests />} />
+      </Route>
+
       <Route path="*" element={<NotFoundPage />} />
-      {/* Private Routes */}
-      <Route path="/" element={<Home />} />
-      {/* <Route path="/profile" element={<Profile />} /> */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/competitions" element={<Competitions />} />
-      <Route path="/fitness" element={<Fitness />} />
-      <Route path="/trekking" element={<Trekking />} />
-      <Route path="/category" element={<Category />} />
-      <Route path="/products" element={<Product />} />
-      <Route path="/userlist" element={<UserList />} />
-      <Route path="/orders" element={<OrdersList />} />
-      <Route path="/orders/:id" element={<OrderDetails />} />
-      <Route path="/admin/gym-requests" element={<GymRequests />} />
     </Routes>
   );
 };

@@ -6,9 +6,8 @@ import Cookies from "js-cookie";
 export const loginAsync = createAsyncThunk("auth/login", async (userData, { rejectWithValue }) => {
   try {
     const response = await loginUser(userData);
-    console.log("Login response:", response.data);
-    Cookies.set("token", response.data.token);
-    Cookies.set("refreshToken", response.data.refreshToken);
+    Cookies.set("token", response.data.token, { expires: 1 });
+    Cookies.set("refreshToken", response.data.refreshToken, { expires: 7 });
     return response.data;
   } catch (error) {
     return rejectWithValue(error?.response?.data?.message || "Login failed. Please try again.");
@@ -47,7 +46,10 @@ const authSlice = createSlice({
       state.refreshToken = null;
       state.error = null;
       state.loading = false;
+      Cookies.remove("token");
+      Cookies.remove("refreshToken");
     },
+
     setAuthData(state, action) {
       const { user, token, refreshToken } = action.payload;
       state.isLoggedIn = true;
@@ -91,6 +93,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout , setAuthData } = authSlice.actions;
+export const { logout, setAuthData } = authSlice.actions;
 export const selectUser = (state) => state.auth.user;
 export default authSlice.reducer;

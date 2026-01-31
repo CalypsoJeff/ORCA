@@ -12,7 +12,7 @@ const REFRESH_SECRET_KEY = "REFRESH_SECRET_KEY";
  */
 export const generateToken = (_id, email, role) => {
     const token = jwt.sign({ _id, email, role }, SECRET_KEY, {
-        expiresIn: '2h',
+        expiresIn: '30m',
     });
     const refreshToken = jwt.sign({ _id, email, role }, REFRESH_SECRET_KEY, {
         expiresIn: '5d',

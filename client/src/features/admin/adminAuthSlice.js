@@ -8,15 +8,8 @@ export const loginAdminAsync = createAsyncThunk(
     try {
       const response = await loginAdminAPI(adminData);
       const data = response.data;
-      console.log("Login response data:", data);
-      // Set cookies
-      Cookies.set("token", data.token);
-      Cookies.set("refreshToken", data.refreshToken);
-      console.log("SuperAdmin Raw Data:", data);
-      console.log("Extracted Admin:", {
-        _id: data.admin?._id ?? data._id,
-        name: data.admin?.name ?? data.name,
-      });
+      Cookies.set("token", data.token, { expires: 1 });
+      Cookies.set("refreshToken", data.refreshToken, { expires: 7 });
       return {
         admin: {
           _id: data.admin?._id ?? data._id,
