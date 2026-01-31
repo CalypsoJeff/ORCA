@@ -40,7 +40,7 @@ export default function Login() {
     try {
       setGoogleLoading(true);
       const { idToken } = await signInWithGoogle();
-      const { data } = await api.post("/api/auth/google", { idToken });
+      const { data } = await api.post("/api/user/google", { idToken });
       // { user, token, refreshToken } (or cookies if your API sets them)
       toast.success("Signed in with Google");
       navigate("/home");

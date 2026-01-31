@@ -20,8 +20,6 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
-// Optional: limit scope if needed
-// provider.addScope('profile'); provider.addScope('email');
 
 export async function signInWithGoogle() {
   const result = await signInWithPopup(auth, provider);
