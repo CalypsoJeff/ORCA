@@ -19,6 +19,7 @@ export const getExercises = async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 };
+
 export const getExerciseById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -67,5 +68,20 @@ export const updateExercise = async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+};
+export const getExercisesForMember = async (req, res) => {
+    try {
+        const memberId = req.userId; // from member auth middleware
+        const member = await Member.findById(memberId).select("gymOwnerId");
+
+        if (!member?.gymOwnerId) {
+            return res.status(400).json({ message: "Member not linked to a gym" });
+        }
+
+        const exercises = await Exercise.find({ gymOwnerId: member.gymOwnerId });
+        return res.json(exercises);
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
     }
 };
