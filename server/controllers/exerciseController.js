@@ -1,5 +1,5 @@
 import Exercise from "../models/exerciseModel.js";
-import Member from "../models/memberModel.js";
+import Member from "../models/userModel.js";
 
 export const addExercise = async (req, res) => {
     try {

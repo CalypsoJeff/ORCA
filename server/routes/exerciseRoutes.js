@@ -8,13 +8,12 @@ import {
     updateExercise
 } from "../controllers/exerciseController.js";
 import { gymOwnerAuth   } from "../middleware/gymAuth.js";
-import { userAuth } from "../middleware/userAuth.js"; 
 
 const router = express.Router();    
 
 router.post("/add", gymOwnerAuth , addExercise);
 router.get("/", gymOwnerAuth , getExercises);
-router.get("/member", userAuth, getExercisesForMember); // No auth needed for members
+router.get("/member", getExercisesForMember); // No auth needed for members
 router.get("/:id", gymOwnerAuth , getExerciseById);
 router.put("/:id", gymOwnerAuth , updateExercise);
 router.delete("/:id", gymOwnerAuth , deleteExercise);
