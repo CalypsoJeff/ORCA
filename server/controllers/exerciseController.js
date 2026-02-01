@@ -1,4 +1,5 @@
 import Exercise from "../models/exerciseModel.js";
+import Member from "../models/memberModel.js";
 
 export const addExercise = async (req, res) => {
     try {
@@ -74,6 +75,9 @@ export const getExercisesForMember = async (req, res) => {
     try {
         const memberId = req.userId; // from member auth middleware
         const member = await Member.findById(memberId).select("gymOwnerId");
+
+        console.log("📥 getExercisesForMember called");
+        console.log("📥 req.userId:", req.userId);
 
         if (!member?.gymOwnerId) {
             return res.status(400).json({ message: "Member not linked to a gym" });
