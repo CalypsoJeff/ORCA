@@ -53,6 +53,12 @@ const loginUser = async (req, res) => {
     res.status(500).json({ error: "An error occurred during login. Please try again later." });
   }
 };
+export const checkUserExists = async (req, res) => {
+  const { phone } = req.body;
+  const user = await User.findOne({ phone });
+  res.json({ exists: !!user });
+};
+
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -636,6 +642,7 @@ const getMemberChallenges = async (req, res) => {
 
 export default {
   loginUser,
+  checkUserExists,
   registerUser,
   verifyOtpAndRegister,
   resendOtp,

@@ -4,6 +4,7 @@ import { isLogin } from "../middleware/userAuth.js";
 const router = express.Router();
 
 router.post("/login", userController.loginUser);
+router.post("/check-user", userController.checkUserExists);
 router.post("/register", userController.registerUser);
 router.post("/verify-otp", userController.verifyOtpAndRegister);
 router.post("/resend-otp", userController.resendOtp);
