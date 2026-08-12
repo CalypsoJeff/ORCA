@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { generateOTP, sendOTP } from "../helper/twiloOtp.js";
+import { generateOTP, sendOTP } from "../helper/otpService.js";
 import User from '../models/userModel.js';
 import Competition from '../models/competitionsModel.js';
 import Trekking from '../models/trekkingModel.js';
