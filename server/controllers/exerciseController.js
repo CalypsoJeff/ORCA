@@ -1,6 +1,34 @@
 import Exercise from "../models/exerciseModel.js";
-import Member from "../models/userModel.js";
 import GymOwner from "../models/gymOwnerModel.js";
+import WorkoutLog from "../models/workoutLogModel.js";
+
+const getLoggedInUserId = (req) => req.user?._id || req.user?.id;
+
+const parseWorkoutDate = (value) => {
+    if (value === undefined || value === null || value === "") {
+        return undefined;
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+        throw new Error("Invalid workout date");
+    }
+
+    return parsedDate;
+};
+
+const parseNumber = (value, fieldName) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        throw new Error(`${fieldName} must be a valid number`);
+    }
+
+    return parsed;
+};
+
+const isWorkoutValidationError = (error) =>
+    error?.message === "Invalid workout date" ||
+    error?.message?.includes("must be a valid number");
 
 export const addExercise = async (req, res) => {
     try {
@@ -68,6 +96,188 @@ export const updateExercise = async (req, res) => {
             message: "Exercise updated successfully",
             exercise: updated
         });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const createWorkoutLog = async (req, res) => {
+    try {
+        const userId = getLoggedInUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const {
+            exerciseName,
+            category,
+            weight,
+            sets,
+            reps,
+            mood,
+            date,
+        } = req.body;
+
+        if (!exerciseName || !category || weight === undefined || sets === undefined || reps === undefined || !mood) {
+            return res.status(400).json({
+                message: "exerciseName, category, weight, sets, reps, and mood are required",
+            });
+        }
+
+        const workoutLog = await WorkoutLog.create({
+            userId,
+            exerciseName: String(exerciseName).trim(),
+            category: String(category).trim(),
+            weight: parseNumber(weight, "weight"),
+            sets: parseNumber(sets, "sets"),
+            reps: parseNumber(reps, "reps"),
+            mood: String(mood).trim(),
+            ...(date !== undefined ? { date: parseWorkoutDate(date) } : {}),
+        });
+
+        res.status(201).json({
+            message: "Workout log created successfully",
+            workoutLog,
+        });
+    } catch (err) {
+        if (isWorkoutValidationError(err)) {
+            return res.status(400).json({ message: err.message });
+        }
+
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const getWorkoutLogs = async (req, res) => {
+    try {
+        const userId = getLoggedInUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const workoutLogs = await WorkoutLog.find({ userId }).sort({
+            date: -1,
+            createdAt: -1,
+        });
+
+        res.json(workoutLogs);
+    } catch (err) {
+        if (isWorkoutValidationError(err)) {
+            return res.status(400).json({ message: err.message });
+        }
+
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const getWorkoutLogById = async (req, res) => {
+    try {
+        const userId = getLoggedInUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const { id } = req.params;
+
+        const workoutLog = await WorkoutLog.findOne({
+            _id: id,
+            userId,
+        });
+
+        if (!workoutLog) {
+            return res.status(404).json({ message: "Workout log not found" });
+        }
+
+        res.json(workoutLog);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const updateWorkoutLog = async (req, res) => {
+    try {
+        const userId = getLoggedInUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const { id } = req.params;
+        const updates = {};
+
+        if (req.body.exerciseName !== undefined) {
+            updates.exerciseName = String(req.body.exerciseName).trim();
+        }
+
+        if (req.body.category !== undefined) {
+            updates.category = String(req.body.category).trim();
+        }
+
+        if (req.body.weight !== undefined) {
+            updates.weight = parseNumber(req.body.weight, "weight");
+        }
+
+        if (req.body.sets !== undefined) {
+            updates.sets = parseNumber(req.body.sets, "sets");
+        }
+
+        if (req.body.reps !== undefined) {
+            updates.reps = parseNumber(req.body.reps, "reps");
+        }
+
+        if (req.body.mood !== undefined) {
+            updates.mood = String(req.body.mood).trim();
+        }
+
+        if (req.body.date !== undefined) {
+            updates.date = parseWorkoutDate(req.body.date);
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: "No fields provided to update" });
+        }
+
+        const updatedWorkoutLog = await WorkoutLog.findOneAndUpdate(
+            { _id: id, userId },
+            updates,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedWorkoutLog) {
+            return res.status(404).json({ message: "Workout log not found" });
+        }
+
+        res.json({
+            message: "Workout log updated successfully",
+            workoutLog: updatedWorkoutLog,
+        });
+    } catch (err) {
+        if (isWorkoutValidationError(err)) {
+            return res.status(400).json({ message: err.message });
+        }
+
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const deleteWorkoutLog = async (req, res) => {
+    try {
+        const userId = getLoggedInUserId(req);
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const { id } = req.params;
+
+        const deletedWorkoutLog = await WorkoutLog.findOneAndDelete({
+            _id: id,
+            userId,
+        });
+
+        if (!deletedWorkoutLog) {
+            return res.status(404).json({ message: "Workout log not found" });
+        }
+
+        res.json({ message: "Workout log deleted successfully" });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
