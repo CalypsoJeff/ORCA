@@ -14,12 +14,20 @@ let serviceAccountPath = fs.existsSync(localPath) ? localPath : renderPath;
 
 console.log("🔥 Using Firebase credentials from:", serviceAccountPath);
 
-const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+if (fs.existsSync(serviceAccountPath)) {
+  const serviceAccount = JSON.parse(
+    fs.readFileSync(serviceAccountPath, "utf8")
+  );
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+  console.log("✅ Firebase initialized");
+} else {
+  console.warn("⚠️ Firebase credentials not found. Skipping Firebase.");
 }
 
 export default admin;

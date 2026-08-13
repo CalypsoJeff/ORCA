@@ -14,6 +14,12 @@ import TempUser from "../models/tempUser.js";
 import TempCompetitionRegistration from "../models/tempCompetitionRegistration.js";
 
 
+const normalizePhone = (phone) => {
+  if (!phone) return "";
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 10 ? digits.slice(-10) : digits;
+};
+
 const loginUser = async (req, res) => {
   try {
     console.log("User login started");
@@ -21,7 +27,11 @@ const loginUser = async (req, res) => {
     if (!phone || !password) {
       return res.status(400).json({ error: "Phone and password are required." });
     }
-    const user = await User.findOne({ phone }).select('+password');
+
+    const normalizedPhone = normalizePhone(phone);
+    const user = await User.findOne({
+      $or: [{ phone: normalizedPhone }, { phone }]
+    }).select('+password');
 
     if (!user) {
       return res.status(401).json({ error: "User not found. Please register first." });
@@ -55,7 +65,10 @@ const loginUser = async (req, res) => {
 };
 export const checkUserExists = async (req, res) => {
   const { phone } = req.body;
-  const user = await User.findOne({ phone });
+  const normalizedPhone = normalizePhone(phone);
+  const user = await User.findOne({
+    $or: [{ phone: normalizedPhone }, { phone }]
+  });
   res.json({ exists: !!user });
 };
 
@@ -66,18 +79,22 @@ const registerUser = async (req, res) => {
     if (!name || !email || !password || !phone)
       return res.status(400).json({ error: "All fields required" });
 
-    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    const normalizedPhone = normalizePhone(phone);
+
+    const existingUser = await User.findOne({
+      $or: [{ email }, { phone: normalizedPhone }, { phone }]
+    });
     if (existingUser)
       return res.status(400).json({ error: "Email or Phone already registered." });
 
     const otp = generateOTP();
 
     await TempUser.findOneAndUpdate(
-      { phone },
+      { $or: [{ phone: normalizedPhone }, { phone }] },
       {
         name,
         email,
-        phone,
+        phone: normalizedPhone,
         password,
         otp,
         otpExpiresAt: Date.now() + 5 * 60 * 1000
@@ -85,7 +102,7 @@ const registerUser = async (req, res) => {
       { upsert: true }
     );
 
-    await sendOTP(phone, otp);
+    await sendOTP(normalizedPhone, otp);
 
     return res.status(200).json({ message: "OTP sent successfully." });
 
@@ -136,12 +153,20 @@ const verifyOtpAndRegister = async (req, res) => {
   try {
     const { phone, otp } = req.body;
 
-    const temp = await TempUser.findOne({ phone });
+    if (!phone || !otp) {
+      return res.status(400).json({ error: "Phone and OTP are required." });
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+
+    const temp = await TempUser.findOne({
+      $or: [{ phone: normalizedPhone }, { phone }]
+    });
 
     if (!temp)
-      return res.status(400).json({ error: "OTP expired. Please register again." });
+      return res.status(400).json({ error: "OTP expired or user not found. Please register again." });
 
-    if (temp.otp !== otp)
+    if (String(temp.otp).trim() !== String(otp).trim())
       return res.status(400).json({ error: "Invalid OTP" });
 
     if (temp.otpExpiresAt < Date.now())
@@ -156,7 +181,9 @@ const verifyOtpAndRegister = async (req, res) => {
       phone: temp.phone,
     });
 
-    await TempUser.deleteOne({ phone });
+    await TempUser.deleteMany({
+      $or: [{ phone: normalizedPhone }, { phone }]
+    });
 
     const { token, refreshToken } = generateToken(newUser._id, newUser.phone, "user");
 
@@ -178,7 +205,15 @@ const resendOtp = async (req, res) => {
   try {
     const { phone } = req.body;
 
-    const temp = await TempUser.findOne({ phone });
+    if (!phone) {
+      return res.status(400).json({ error: "Phone number is required." });
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+
+    const temp = await TempUser.findOne({
+      $or: [{ phone: normalizedPhone }, { phone }]
+    });
 
     if (!temp)
       return res.status(400).json({ error: "Data expired. Register again." });
@@ -189,7 +224,7 @@ const resendOtp = async (req, res) => {
     temp.otpExpiresAt = Date.now() + 5 * 60 * 1000;
     await temp.save();
 
-    await sendOTP(phone, otp);
+    await sendOTP(normalizedPhone, otp);
 
     return res.status(200).json({ message: "OTP resent successfully." });
 

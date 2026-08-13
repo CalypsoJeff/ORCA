@@ -5,8 +5,8 @@ dotenv.config();
 const MSG91_AUTHKEY = process.env.MSG91_AUTHKEY;
 const MSG91_SENDER_ID = process.env.MSG91_SENDER_ID;
 
-if (!MSG91_AUTHKEY || !MSG91_SENDER_ID) {
-  throw new Error('Missing MSG91_AUTHKEY or MSG91_SENDER_ID in .env');
+if (!MSG91_AUTHKEY) {
+  throw new Error('Missing MSG91_AUTHKEY in .env');
 }
 
 // Generate a 6-digit OTP.
@@ -17,46 +17,85 @@ export const generateOTP = () =>
 const formatPhoneNumber = (phone) => {
   const digits = String(phone).replace(/\D/g, '');
 
-  if (digits.startsWith('91')) {
+  if (digits.startsWith('91') && digits.length > 10) {
     return digits;
   }
 
   return `91${digits}`;
 };
 
-// Send OTP via MSG91's OTP API.
+// Send OTP via MSG91's Flow API v5.
 export const sendOTP = async (phone, otp) => {
-  const mobile = formatPhoneNumber(phone);
-
-  const params = new URLSearchParams({
-    authkey: MSG91_AUTHKEY,
-    mobile,
-    message: `Your OTP is ${otp}. It will expire in 10 minutes.`,
-    sender: MSG91_SENDER_ID,
-    otp,
-    otp_expiry: '10',
-    otp_length: '6',
-  });
-
-  const response = await fetch(
-    `https://api.msg91.com/api/sendotp.php?${params.toString()}`
-  );
-
-  const rawBody = await response.text();
-  let parsedBody = null;
-
   try {
-    parsedBody = JSON.parse(rawBody);
-  } catch {
-    parsedBody = null;
-  }
+    const mobile = formatPhoneNumber(phone);
+    const templateId = process.env.MSG91_TEMPLATE_ID;
 
-  if (
-    !response.ok ||
-    (parsedBody?.type && String(parsedBody.type).toLowerCase() !== 'success')
-  ) {
-    throw new Error(`MSG91 OTP request failed: ${rawBody}`);
-  }
+    if (!templateId) {
+      throw new Error('Missing MSG91_TEMPLATE_ID in .env');
+    }
 
-  console.log('OTP sent via MSG91:', rawBody);
+    const flowUrl = 'https://control.msg91.com/api/v5/flow/';
+    const flowBody = {
+      template_id: templateId,
+      sender: MSG91_SENDER_ID || undefined,
+      recipients: [
+        {
+          mobiles: mobile,
+          otp: otp,
+          OTP: otp,
+          var1: otp,
+          VAR1: otp,
+          var: otp,
+          VAR: otp,
+          code: otp,
+        },
+      ],
+    };
+
+    console.log("========== MSG91 OTP ==========");
+    console.log("Mobile:", mobile);
+    console.log("Sender:", MSG91_SENDER_ID || "N/A");
+    console.log("Template ID:", templateId);
+    console.log("OTP:", otp);
+    console.log("URL:", flowUrl);
+    console.log("================================");
+
+    const response = await fetch(flowUrl, {
+      method: 'POST',
+      headers: {
+        'authkey': MSG91_AUTHKEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(flowBody),
+    });
+
+    const rawBody = await response.text();
+
+    console.log("MSG91 Flow API Status:", response.status);
+    console.log("MSG91 Flow API Response:", rawBody);
+
+    if (!response.ok) {
+      throw new Error(`MSG91 HTTP ${response.status}: ${rawBody}`);
+    }
+
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = null;
+    }
+
+    if (
+      parsedBody?.type &&
+      String(parsedBody.type).toLowerCase() !== "success"
+    ) {
+      throw new Error(`MSG91 rejected OTP: ${rawBody}`);
+    }
+
+    console.log("✅ MSG91 accepted OTP request");
+    return parsedBody;
+  } catch (error) {
+    console.error("❌ MSG91 OTP ERROR:", error);
+    throw error;
+  }
 };
